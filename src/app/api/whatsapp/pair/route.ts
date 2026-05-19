@@ -37,6 +37,7 @@ export async function POST(req: Request) {
     }
 
     // 2. Socket එක ආරම්භ කිරීම
+    // macOS Desktop ලෙස පෙනී සිටීම "Couldn't log in" දෝෂය මගහැරවීමට උදව් වේ.
     const sock = makeWASocket({
       version: version as any,
       auth: state,
@@ -44,6 +45,8 @@ export async function POST(req: Request) {
       logger: pino({ level: 'silent' }) as any,
       browser: Browsers.macOS('Desktop'), 
       connectTimeoutMs: 60000,
+      defaultQueryTimeoutMs: undefined,
+      keepAliveIntervalMs: 10000,
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -51,12 +54,20 @@ export async function POST(req: Request) {
     // 3. QR කේතය ලැබෙන තෙක් රැඳී සිටීම
     const qrPromise = new Promise<string>((resolve, reject) => {
       sock.ev.on('connection.update', (update) => {
-        const { qr, connection } = update;
+        const { qr, connection, lastDisconnect } = update;
+        
         if (qr) {
           resolve(qr);
         }
+
+        if (connection === 'close') {
+          const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
+          if (statusCode !== 401) {
+             reject(new Error(`සම්බන්ධතාවය බිඳ වැටුණි (Status: ${statusCode})`));
+          }
+        }
+        
         if (connection === 'open') {
-          // Already connected
           reject(new Error('Already connected'));
         }
       });
@@ -78,7 +89,7 @@ export async function POST(req: Request) {
       console.error("QR Generation failed:", err);
       return NextResponse.json({ 
         success: false, 
-        error: err.message === 'QR Timeout' ? "QR කේතය ලබා ගැනීමට ප්‍රමාද වැඩියි. නැවත උත්සාහ කරන්න." : "සම්බන්ධතාවය ස්ථාපිත කිරීමට නොහැකි විය." 
+        error: err.message === 'QR Timeout' ? "QR කේතය ලබා ගැනීමට ප්‍රමාද වැඩියි. නැවත උත්සාහ කරන්න." : err.message || "සම්බන්ධතාවය ස්ථාපිත කිරීමට නොහැකි විය." 
       }, { status: 500 });
     }
 
