@@ -4,13 +4,15 @@ import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Smartphone, RefreshCw, KeyRound, CheckCircle2, AlertCircle, Loader2, Info } from "lucide-react";
+import { Smartphone, Smartphone as Mobile, KeyRound, CheckCircle2, AlertCircle, Loader2, Info, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export function PairingSection() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [pairCode, setPairCode] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const handlePairing = async () => {
     if (!phoneNumber) {
@@ -24,6 +26,7 @@ export function PairingSection() {
     
     setIsLoading(true);
     setPairCode(null);
+    setServerError(null);
 
     try {
       const response = await fetch('/api/whatsapp/pair', {
@@ -43,18 +46,20 @@ export function PairingSection() {
           description: "මෙම කේතය ඔබගේ WhatsApp ඇප් එකේ ඇතුළත් කරන්න.",
         });
       } else {
+        setServerError(data.error || "කේතය ලබාගත නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.");
         toast({
           variant: "destructive",
           title: "සම්බන්ධතාවය අසාර්ථකයි",
-          description: data.error || "කෝඩ් එක ලබාගත නොහැකි විය. නැවත උත්සාහ කරන්න.",
+          description: data.error || "Error generating pairing code.",
         });
       }
     } catch (error) {
       console.error("Pairing fetch error:", error);
+      setServerError("සර්වර් එක සම්බන්ධ කර ගැනීමට නොහැකි විය. කරුණාකර ටික වේලාවකින් උත්සාහ කරන්න.");
       toast({
         variant: "destructive",
         title: "පද්ධති දෝෂයක්",
-        description: "සර්වර් එක සම්බන්ධ කර ගැනීමට නොහැකි විය. කරුණාකර ටික වේලාවකින් උත්සාහ කරන්න.",
+        description: "Network error occurred.",
       });
     } finally {
       setIsLoading(false);
@@ -65,7 +70,7 @@ export function PairingSection() {
     <Card className="glass-morphism h-full">
       <CardHeader>
         <div className="flex items-center gap-2 text-primary mb-2">
-          <Smartphone className="w-5 h-5" />
+          <Mobile className="w-5 h-5" />
           <span className="text-sm font-medium uppercase tracking-widest">Connect</span>
         </div>
         <CardTitle className="text-2xl font-headline font-bold">WhatsApp Pairing</CardTitle>
@@ -74,6 +79,14 @@ export function PairingSection() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {serverError && (
+          <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive animate-in fade-in zoom-in-95 duration-300">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription className="text-xs">{serverError}</AlertDescription>
+          </Alert>
+        )}
+
         {!pairCode ? (
           <div className="space-y-4">
             <div className="space-y-2">
@@ -90,7 +103,7 @@ export function PairingSection() {
               </p>
             </div>
             <Button 
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 shadow-lg shadow-primary/20 transition-all active:scale-95"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 shadow-lg shadow-primary/20 transition-all active:scale-95 disabled:opacity-70"
               onClick={handlePairing}
               disabled={isLoading || !phoneNumber}
             >
@@ -136,9 +149,12 @@ export function PairingSection() {
             <Button 
               variant="outline" 
               className="w-full border-white/10 hover:bg-white/5 font-bold"
-              onClick={() => setPairCode(null)}
+              onClick={() => {
+                setPairCode(null);
+                setServerError(null);
+              }}
             >
-              Back / Try Again
+              <RefreshCw className="w-4 h-4 mr-2" /> Try Again
             </Button>
           </div>
         )}
