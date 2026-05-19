@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Smartphone, Smartphone as Mobile, KeyRound, CheckCircle2, AlertCircle, Loader2, Info, RefreshCw } from "lucide-react";
+import { Smartphone as Mobile, KeyRound, AlertCircle, Loader2, Info, RefreshCw, Smartphone } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -42,25 +42,14 @@ export function PairingSection() {
       if (data.success && data.code) {
         setPairCode(data.code);
         toast({
-          title: "කේතය ලැබුණා!",
-          description: "මෙම කේතය ඔබගේ WhatsApp ඇප් එකේ ඇතුළත් කරන්න.",
+          title: "කේතය සාර්ථකව ජනනය කළා!",
+          description: "දැන් මෙය ඔබගේ දුරකථනයේ ඇතුළත් කරන්න.",
         });
       } else {
         setServerError(data.error || "කේතය ලබාගත නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.");
-        toast({
-          variant: "destructive",
-          title: "සම්බන්ධතාවය අසාර්ථකයි",
-          description: data.error || "Error generating pairing code.",
-        });
       }
     } catch (error) {
-      console.error("Pairing fetch error:", error);
       setServerError("සර්වර් එක සම්බන්ධ කර ගැනීමට නොහැකි විය. කරුණාකර ටික වේලාවකින් උත්සාහ කරන්න.");
-      toast({
-        variant: "destructive",
-        title: "පද්ධති දෝෂයක්",
-        description: "Network error occurred.",
-      });
     } finally {
       setIsLoading(false);
     }
@@ -110,7 +99,7 @@ export function PairingSection() {
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Generating Code...
+                  Requesting Code...
                 </>
               ) : (
                 <>
@@ -119,6 +108,15 @@ export function PairingSection() {
                 </>
               )}
             </Button>
+            
+            <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
+              <h5 className="text-xs font-bold text-primary mb-2 uppercase tracking-wider flex items-center gap-2">
+                <Smartphone className="w-3 h-3" /> උපදෙස් (Instructions)
+              </h5>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                මෙහිදී ඔබගේ දුරකථනයට පණිවිඩයක් (Notification) ලැබෙන්නේ නැත. කේතය ලැබුණු පසු දුරකථනයේ <b>Settings &gt; Linked Devices &gt; Link with phone number</b> වෙත ගොස් එය ඇතුළත් කරන්න.
+              </p>
+            </div>
           </div>
         ) : (
           <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
@@ -132,20 +130,26 @@ export function PairingSection() {
                 ))}
               </div>
             </div>
+            
             <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
               <div className="flex items-start gap-3 text-sm">
-                <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent"><CheckCircle2 className="w-3.5 h-3.5" /></div>
-                <p>Go to WhatsApp Settings &gt; Linked Devices</p>
+                <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">1</div>
+                <p>Open WhatsApp on your phone.</p>
               </div>
               <div className="flex items-start gap-3 text-sm">
-                <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent"><CheckCircle2 className="w-3.5 h-3.5" /></div>
-                <p>Tap "Link with phone number instead"</p>
+                <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">2</div>
+                <p>Go to <b>Settings &gt; Linked Devices &gt; Link a Device</b></p>
               </div>
               <div className="flex items-start gap-3 text-sm">
-                <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent"><CheckCircle2 className="w-3.5 h-3.5" /></div>
-                <p>Enter the 8-digit code above.</p>
+                <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">3</div>
+                <p>Tap <b>&quot;Link with phone number instead&quot;</b> at the bottom.</p>
+              </div>
+              <div className="flex items-start gap-3 text-sm">
+                <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">4</div>
+                <p>Enter the 8-digit code shown above.</p>
               </div>
             </div>
+
             <Button 
               variant="outline" 
               className="w-full border-white/10 hover:bg-white/5 font-bold"
@@ -154,7 +158,7 @@ export function PairingSection() {
                 setServerError(null);
               }}
             >
-              <RefreshCw className="w-4 h-4 mr-2" /> Try Again
+              <RefreshCw className="w-4 h-4 mr-2" /> Try with another number
             </Button>
           </div>
         )}

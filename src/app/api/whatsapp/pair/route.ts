@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import makeWASocket, { useMultiFileAuthState, fetchLatestBaileysVersion, Browsers, delay, DisconnectReason } from '@whiskeysockets/baileys';
+import makeWASocket, { useMultiFileAuthState, fetchLatestBaileysVersion, Browsers, delay } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
@@ -7,15 +7,20 @@ import os from 'os';
 
 /**
  * WhatsApp Pairing API Route
- * Improved error handling and connection stability
+ * ලොග් වීමකින් තොරව Pairing Code එකක් ලබා ගැනීම සඳහා භාවිතා වේ.
  */
 export async function POST(req: Request) {
   let sessionPath = '';
   try {
     const { phoneNumber } = await req.json();
     
-    // Cleaning number: strictly only digits
-    const sanitizedNumber = phoneNumber?.replace(/\D/g, '');
+    // අංකය පිරිසිදු කිරීම (ඉලක්කම් පමණක් තබා ගැනීම)
+    let sanitizedNumber = phoneNumber?.replace(/\D/g, '');
+    
+    // ශ්‍රී ලංකාවේ අංකයක් නම් (07... ලෙස ඇරඹේ නම්) එය 94... බවට පත් කිරීම
+    if (sanitizedNumber.startsWith('0')) {
+      sanitizedNumber = '94' + sanitizedNumber.substring(1);
+    }
     
     if (!sanitizedNumber || sanitizedNumber.length < 10) {
       return NextResponse.json({ 
@@ -24,8 +29,8 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // Creating a unique temp session
-    const sessionId = `sithu_session_${Date.now()}`;
+    // සෑම උත්සාහයකදීම අලුත් සෙෂන් එකක් සාදා ගැනීම (පෙර වැරදි මගහැරීමට)
+    const sessionId = `sithu_pair_${Date.now()}`;
     sessionPath = path.join(os.tmpdir(), sessionId);
     
     if (!fs.existsSync(sessionPath)) {
@@ -40,44 +45,46 @@ export async function POST(req: Request) {
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }) as any,
-      browser: Browsers.macOS('Desktop'),
-      connectTimeoutMs: 30000,
-      keepAliveIntervalMs: 10000,
+      browser: Browsers.ubuntu('Chrome'), // Ubuntu/Chrome ලෙස පෙන්වීම සාර්ථකත්වය වැඩිකරයි
+      connectTimeoutMs: 60000,
+      defaultQueryTimeoutMs: 0,
     });
 
-    // Handle credentials saving
-    sock.ev.on('creds.update', saveCreds);
+    // සර්වර් එක සමඟ සම්බන්ධ වීමට මඳ වේලාවක් ලබා දීම
+    await delay(6000); 
 
-    // Explicitly wait for the connection to be "ready" to request code
-    // Sometimes calling immediately results in failure
-    await delay(5000); 
-
-    try {
-      const code = await sock.requestPairingCode(sanitizedNumber);
-      
-      if (code) {
-        const formattedCode = code.replace(/-/g, '').toUpperCase();
+    if (!sock.authState.creds.registered) {
+      try {
+        const code = await sock.requestPairingCode(sanitizedNumber);
+        
+        if (code) {
+          const formattedCode = code.replace(/-/g, '').toUpperCase();
+          return NextResponse.json({ 
+            success: true, 
+            code: formattedCode 
+          });
+        } else {
+          throw new Error("කේතය ලබා ගැනීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.");
+        }
+      } catch (err: any) {
+        console.error("Pairing request inner error:", err);
         return NextResponse.json({ 
-          success: true, 
-          code: formattedCode 
-        });
-      } else {
-        throw new Error("WhatsApp සර්වර් එකෙන් කේතය ලබාගත නොහැකි විය.");
+          success: false, 
+          error: "වට්සැප් සර්වර් සමඟ සම්බන්ධ වීමට නොහැකි විය. කරුණාකර ටික වේලාවකින් උත්සාහ කරන්න." 
+        }, { status: 500 });
       }
-    } catch (pairingError: any) {
-      console.error("Pairing request failed:", pairingError);
+    } else {
       return NextResponse.json({ 
         success: false, 
-        error: "Pairing කේතය ඉල්ලීමේදී දෝෂයක් ඇති විය. කරුණාකර නැවත උත්සාහ කරන්න." 
-      }, { status: 500 });
+        error: "මෙම සෙෂන් එක දැනටමත් ලියාපදිංචි වී ඇත." 
+      }, { status: 400 });
     }
 
   } catch (error: any) {
     console.error("Critical WhatsApp API Error:", error);
-    
     return NextResponse.json({ 
       success: false, 
-      error: error.message || "සම්බන්ධතාවය අසාර්ථක විය. කරුණාකර ඔබගේ අන්තර්ජාල සම්බන්ධතාවය පරීක්ෂා කරන්න." 
+      error: "පද්ධති දෝෂයකි. කරුණාකර නැවත උත්සාහ කරන්න." 
     }, { status: 500 });
   }
 }
