@@ -118,7 +118,7 @@ export function PairingSection() {
               </h5>
               <div className="text-[10px] text-muted-foreground leading-relaxed space-y-2">
                 <p>• අංකය ලබා දුන් පසු දුරකථනයට පණිවිඩයක් (Notification) ලැබිය හැක. එය ක්ලික් කර කේතය ඇතුළත් කරන්න.</p>
-                <p>• Notification එකක් නොලැබුණහොත්: <b>Settings &gt; Linked Devices &gt; Link a Device &gt; Link with phone number instead</b> වෙත යන්න.</p>
+                <p>• Notification එකක් ලැබුණේ නැතිනම්: <b>Settings &gt; Linked Devices &gt; Link a Device &gt; Link with phone number instead</b> වෙත යන්න.</p>
               </div>
             </div>
           </div>
@@ -127,7 +127,7 @@ export function PairingSection() {
             <div className="flex flex-col items-center justify-center p-8 bg-black/40 rounded-2xl border border-primary/20 gap-4 shadow-inner">
               <p className="text-xs text-muted-foreground uppercase tracking-[0.2em] font-bold">Your 8-Digit Code</p>
               <div className="grid grid-cols-4 gap-3 sm:flex sm:flex-row sm:gap-2">
-                {pairCode.split("").map((char, i) => (
+                {pairCode.replace('-', '').split("").map((char, i) => (
                   <div key={i} className="w-10 h-14 flex items-center justify-center bg-card border border-white/10 rounded-lg text-2xl font-mono font-black text-accent shadow-[0_0_20px_rgba(0,255,255,0.1)]">
                     {char}
                   </div>
@@ -152,7 +152,7 @@ export function PairingSection() {
               </div>
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">3</div>
-                <p>මෙම කේතය ඇතුළත් කරන්න: <b>{pairCode}</b></p>
+                <p>මෙම කේතය හරියටම ඇතුළත් කරන්න: <b>{pairCode}</b></p>
               </div>
             </div>
 

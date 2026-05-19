@@ -6,7 +6,7 @@ import path from 'path';
 import os from 'os';
 
 /**
- * WhatsApp Pairing API Route - V4 (Enhanced macOS Desktop Spoofing)
+ * WhatsApp Pairing API Route - V5 (Stable macOS Identity)
  */
 export const maxDuration = 60; 
 
@@ -15,10 +15,9 @@ export async function POST(req: Request) {
   try {
     const { phoneNumber } = await req.json();
     
-    // 1. Clean and normalize the phone number
+    // 1. Precise Normalization for Sri Lankan Numbers
     let sanitizedNumber = phoneNumber?.replace(/\D/g, '');
     
-    // Sri Lankan number normalization
     if (sanitizedNumber.startsWith('0') && sanitizedNumber.length === 10) {
       sanitizedNumber = '94' + sanitizedNumber.substring(1);
     } else if (sanitizedNumber.length === 9) {
@@ -32,18 +31,22 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // 2. Setup a unique session directory to avoid locks
-    // Using a timestamp to ensure fresh sessions each time
-    const sessionId = `sithu_session_${sanitizedNumber}_${Date.now()}`;
+    // 2. Setup a unique session directory and CLEAR it for fresh pairing
+    const sessionId = `sithu_v5_${sanitizedNumber}`;
     sessionPath = path.join(os.tmpdir(), sessionId);
     
-    if (!fs.existsSync(sessionPath)) {
-      fs.mkdirSync(sessionPath, { recursive: true });
+    if (fs.existsSync(sessionPath)) {
+      try {
+        fs.rmSync(sessionPath, { recursive: true, force: true });
+      } catch (e) {
+        console.error("Could not remove old session", e);
+      }
     }
+    fs.mkdirSync(sessionPath, { recursive: true });
 
     const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
     
-    // Fetch version safely
+    // Fetch latest version safely
     let version: [number, number, number] = [2, 3000, 1015901307];
     try {
       const latest = await fetchLatestBaileysVersion();
@@ -54,22 +57,24 @@ export async function POST(req: Request) {
       console.log("Using default Baileys version");
     }
 
-    // 3. Initialize the socket mimicking macOS for better stability
+    // 3. Initialize the socket mimicking macOS Desktop (Crucial for stability)
     const sock = makeWASocket({
       version: version as any,
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }) as any,
-      // Mimic macOS Desktop exactly as it works best for pairing requests and notifications
-      browser: Browsers.macOS('Desktop'), 
+      // Mimic macOS exactly to avoid "Couldn't link device" errors
+      browser: ['Mac OS', 'Chrome', '121.0.6167.184'], 
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 0,
       keepAliveIntervalMs: 15000,
     });
 
-    // 4. Wait for the socket to be ready before requesting code
-    // Increased delay to ensure the device is registered on WhatsApp servers
-    await delay(10000); 
+    // Handle credentials updates
+    sock.ev.on('creds.update', saveCreds);
+
+    // 4. Wait for the handshake to complete
+    await delay(8000); 
 
     if (!sock.authState.creds.registered) {
       try {
@@ -77,24 +82,20 @@ export async function POST(req: Request) {
         const code = await sock.requestPairingCode(sanitizedNumber);
         
         if (code) {
-          const formattedCode = code.replace(/-/g, '').toUpperCase();
-          
-          // Background cleanup of session after timeout (optional, but keep for now)
-          // sock.ev.on('creds.update', saveCreds);
-          
+          // Return the code as-is (usually format is ABCD-EFGH)
           return NextResponse.json({ 
             success: true, 
-            code: formattedCode,
+            code: code.toUpperCase(),
             numberUsed: sanitizedNumber
           });
         } else {
-          throw new Error("Pairing code generation returned null.");
+          throw new Error("Code request returned null");
         }
       } catch (err: any) {
         console.error("Pairing request failed:", err);
         return NextResponse.json({ 
           success: false, 
-          error: "WhatsApp සර්වර් විසින් මෙම අංකය ප්‍රතික්ෂේප කරන ලදී. අංකය නිවැරදි දැයි පරීක්ෂා කර නැවත උත්සාහ කරන්න." 
+          error: "WhatsApp විසින් මෙම සම්බන්ධතාවය ප්‍රතික්ෂේප කරන ලදී. කරුණාකර නැවත උත්සාහ කරන්න." 
         }, { status: 500 });
       }
     } else {
@@ -105,10 +106,10 @@ export async function POST(req: Request) {
     }
 
   } catch (error: any) {
-    console.error("Critical Pairing Error:", error);
+    console.error("Critical API Error:", error);
     return NextResponse.json({ 
       success: false, 
-      error: "සම්බන්ධතාවය බිඳ වැටුණි. කරුණාකර ඔබගේ අංකය නිවැරදිව ඇතුළත් කර නැවත උත්සාහ කරන්න." 
+      error: "සම්බන්ධතාවය ස්ථාපිත කිරීමට නොහැකි විය. කරුණාකර ඔබගේ අංකය පරීක්ෂා කරන්න." 
     }, { status: 500 });
   }
 }
