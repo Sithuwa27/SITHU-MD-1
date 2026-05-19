@@ -13,6 +13,7 @@ export function PairingSection() {
   const [pairCode, setPairCode] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [usedNumber, setUsedNumber] = useState<string | null>(null);
 
   const handlePairing = async () => {
     if (!phoneNumber) {
@@ -27,6 +28,7 @@ export function PairingSection() {
     setIsLoading(true);
     setPairCode(null);
     setServerError(null);
+    setUsedNumber(null);
 
     try {
       const response = await fetch('/api/whatsapp/pair', {
@@ -41,15 +43,16 @@ export function PairingSection() {
       
       if (data.success && data.code) {
         setPairCode(data.code);
+        setUsedNumber(data.numberUsed);
         toast({
-          title: "කේතය සාර්ථකව ජනනය කළා!",
+          title: "කේතය සාර්ථකව ලැබුණා!",
           description: "දැන් මෙය ඔබගේ දුරකථනයේ ඇතුළත් කරන්න.",
         });
       } else {
         setServerError(data.error || "කේතය ලබාගත නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.");
       }
     } catch (error) {
-      setServerError("සර්වර් එක සම්බන්ධ කර ගැනීමට නොහැකි විය. කරුණාකර ටික වේලාවකින් උත්සාහ කරන්න.");
+      setServerError("සර්වර් එක සම්බන්ධ කර ගැනීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.");
     } finally {
       setIsLoading(false);
     }
@@ -71,7 +74,7 @@ export function PairingSection() {
         {serverError && (
           <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive animate-in fade-in zoom-in-95 duration-300">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
+            <AlertTitle>දෝෂයකි (Error)</AlertTitle>
             <AlertDescription className="text-xs">{serverError}</AlertDescription>
           </Alert>
         )}
@@ -79,7 +82,7 @@ export function PairingSection() {
         {!pairCode ? (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm text-muted-foreground font-medium">Phone Number (With Country Code)</label>
+              <label className="text-sm text-muted-foreground font-medium">දුරකථන අංකය (රටේ කේතය සමඟ)</label>
               <Input 
                 placeholder="උදා: 94771234567" 
                 value={phoneNumber} 
@@ -88,7 +91,7 @@ export function PairingSection() {
                 disabled={isLoading}
               />
               <p className="text-[11px] text-muted-foreground italic flex items-center gap-1">
-                <Info className="w-3 h-3" /> රටේ කේතය (94) සමඟ අංකය ඇතුළත් කරන්න.
+                <Info className="w-3 h-3" /> 0 වෙනුවට 94 භාවිතා කරන්න. (+ ලකුණ අවශ්‍ය නැත)
               </p>
             </div>
             <Button 
@@ -99,7 +102,7 @@ export function PairingSection() {
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Requesting Code...
+                  Requesting...
                 </>
               ) : (
                 <>
@@ -114,9 +117,9 @@ export function PairingSection() {
                 <Smartphone className="w-3 h-3" /> උපදෙස් (Instructions)
               </h5>
               <div className="text-[10px] text-muted-foreground leading-relaxed space-y-1">
-                <p>1. දුරකථනයට පණිවිඩයක් ලැබෙන්නේ නැත.</p>
+                <p>1. දුරකථනයට පණිවිඩයක් (Notification) ලැබෙන්නේ නැත.</p>
                 <p>2. කේතය ලැබුණු පසු <b>Settings &gt; Linked Devices &gt; Link with phone number</b> වෙත යන්න.</p>
-                <p>3. කේතය ලැබී <b>විනාඩියක් ඇතුළත</b> එය දුරකථනයේ ඇතුළත් කිරීමට වගබලා ගන්න.</p>
+                <p>3. එහිදී <b>{phoneNumber || 'ඔබ ඇතුළත් කළ අංකය'}</b> ම පාවිච්චි කිරීමට වගබලා ගන්න.</p>
               </div>
             </div>
           </div>
@@ -131,11 +134,12 @@ export function PairingSection() {
                   </div>
                 ))}
               </div>
+              <p className="text-[10px] text-accent font-bold">Number: +{usedNumber}</p>
             </div>
             
             <div className="p-3 bg-accent/5 border border-accent/20 rounded-lg flex items-center gap-3 animate-pulse">
               <Loader2 className="w-4 h-4 text-accent animate-spin" />
-              <p className="text-[11px] font-bold text-accent uppercase tracking-wider">සම්බන්ධතාවය බලාපොරොත්තුවෙන්... (Waiting for Link)</p>
+              <p className="text-[11px] font-bold text-accent uppercase tracking-wider">සම්බන්ධතාවය බලාපොරොත්තුවෙන්... (Waiting)</p>
             </div>
 
             <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
@@ -145,7 +149,7 @@ export function PairingSection() {
               </div>
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">2</div>
-                <p>Tap <b>&quot;Link with phone number instead&quot;</b></p>
+                <p>Tap <b>"Link with phone number instead"</b></p>
               </div>
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">3</div>
@@ -161,7 +165,7 @@ export function PairingSection() {
                 setServerError(null);
               }}
             >
-              <RefreshCw className="w-4 h-4 mr-2" /> Try with another number
+              <RefreshCw className="w-4 h-4 mr-2" /> Try again
             </Button>
             
             <p className="text-[9px] text-center text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-1">

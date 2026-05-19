@@ -7,37 +7,44 @@ import os from 'os';
 
 /**
  * WhatsApp Pairing API Route
- * ලොග් වීමකින් තොරව Pairing Code එකක් ලබා ගැනීම සඳහා භාවිතා වේ.
  */
-export const maxDuration = 60; // Next.js 15 route timeout extension (60 seconds)
+export const maxDuration = 60; 
 
 export async function POST(req: Request) {
   let sessionPath = '';
   try {
     const { phoneNumber } = await req.json();
     
-    // අංකය පිරිසිදු කිරීම (ඉලක්කම් පමණක් තබා ගැනීම)
+    // 1. අංකය පිරිසිදු කිරීම (ඉලක්කම් පමණක් තබා ගැනීම)
     let sanitizedNumber = phoneNumber?.replace(/\D/g, '');
     
-    // ශ්‍රී ලංකාවේ අංකයක් නම් (07... ලෙස ඇරඹේ නම්) එය 94... බවට පත් කිරීම
-    if (sanitizedNumber.startsWith('0')) {
+    // 2. ශ්‍රී ලංකාවේ අංකයක් නම් (07... ලෙස ඇරඹේ නම්) එය 94... බවට පත් කිරීම
+    if (sanitizedNumber.startsWith('0') && sanitizedNumber.length === 10) {
       sanitizedNumber = '94' + sanitizedNumber.substring(1);
     }
     
+    // 3. අංකයේ දිග පරීක්ෂාව (අවම වශයෙන් ඉලක්කම් 10ක්වත් තිබිය යුතුය)
     if (!sanitizedNumber || sanitizedNumber.length < 10) {
       return NextResponse.json({ 
         success: false, 
-        error: "කරුණාකර නිවැරදි දුරකථන අංකයක් ඇතුළත් කරන්න (උදා: 94771234567)." 
+        error: "කරුණාකර රටේ කේතය සමඟ නිවැරදි දුරකථන අංකයක් ඇතුළත් කරන්න (උදා: 94771234567)." 
       }, { status: 400 });
     }
 
-    // ස්ථාවර සෙෂන් එකක් භාවිතා කිරීම (සෑම විටම අලුත් එකක් නොවී දුරකථන අංකය මත පදනම්ව)
+    // 4. සෙෂන් එක කළමනාකරණය
     const sessionId = `sithu_session_${sanitizedNumber}`;
     sessionPath = path.join(os.tmpdir(), sessionId);
     
-    if (!fs.existsSync(sessionPath)) {
-      fs.mkdirSync(sessionPath, { recursive: true });
+    // පැරණි සෙෂන් දත්ත තිබේ නම් ඒවා ඉවත් කිරීම (අලුතින්ම කනෙක්ට් වීමට)
+    if (fs.existsSync(sessionPath)) {
+      try {
+        fs.rmSync(sessionPath, { recursive: true, force: true });
+      } catch (e) {
+        console.error("Error clearing old session:", e);
+      }
     }
+    
+    fs.mkdirSync(sessionPath, { recursive: true });
 
     const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
     const { version } = await fetchLatestBaileysVersion();
@@ -47,44 +54,45 @@ export async function POST(req: Request) {
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }) as any,
-      browser: Browsers.macOS('Desktop'), // වඩාත් ස්ථාවර බ්‍රවුසර පරාමිතියක්
+      browser: Browsers.macOS('Chrome'), // Chrome ලෙස පෙන්වීම වඩාත් සාර්ථක විය හැක
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 0,
-      keepAliveIntervalMs: 10000,
+      keepAliveIntervalMs: 15000,
     });
 
-    // කේතය ලබා ගැනීමට පෙර සර්වර් එක සමඟ සම්බන්ධ වීමට මඳ වේලාවක් ලබා දීම
-    await delay(5000); 
+    // සර්වර් එකට සම්බන්ධ වීමට මඳ වේලාවක් ලබා දීම
+    await delay(7000); 
 
     if (!sock.authState.creds.registered) {
       try {
+        // Pairing code ඉල්ලීම
         const code = await sock.requestPairingCode(sanitizedNumber);
         
         if (code) {
           const formattedCode = code.replace(/-/g, '').toUpperCase();
           
-          // සර්වර් එකේ ක්‍රියාවලිය වහාම අවසන් නොකර මඳ වේලාවක් තබා ගැනීම (Login එක සම්පූර්ණ වීමට)
-          // සටහන: Serverless පරිසරයකදී මෙය සැමවිටම සාර්ථක නොවිය හැක.
+          // Creds update කරන්න listener එක දානවා (මෙය පසුබිමේ සිදුවේ)
           sock.ev.on('creds.update', saveCreds);
           
           return NextResponse.json({ 
             success: true, 
-            code: formattedCode 
+            code: formattedCode,
+            numberUsed: sanitizedNumber
           });
         } else {
-          throw new Error("කේතය ලබා ගැනීමට නොහැකි විය.");
+          throw new Error("කේතය ජනනය කිරීමට නොහැකි විය.");
         }
       } catch (err: any) {
         console.error("Pairing request error:", err);
         return NextResponse.json({ 
           success: false, 
-          error: "වට්සැප් සර්වර් සමඟ සම්බන්ධ වීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න." 
+          error: "වට්සැප් සර්වර් සමඟ සම්බන්ධ වීමට නොහැකි විය. ඔබගේ අංකය නිවැරදි දැයි නැවත පරීක්ෂා කරන්න." 
         }, { status: 500 });
       }
     } else {
       return NextResponse.json({ 
         success: false, 
-        error: "මෙම සෙෂන් එක දැනටමත් ලියාපදිංචි වී ඇත." 
+        error: "මෙම අංකය දැනටමත් සම්බන්ධ වී ඇත." 
       }, { status: 400 });
     }
 
