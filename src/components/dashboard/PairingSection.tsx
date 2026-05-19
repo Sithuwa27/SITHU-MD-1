@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Smartphone as Mobile, KeyRound, AlertCircle, Loader2, Info, RefreshCw, ShieldCheck, CheckCircle2, QrCode } from "lucide-react";
+import { Smartphone as Mobile, KeyRound, AlertCircle, Loader2, Info, RefreshCw, ShieldCheck, CheckCircle2, QrCode, Bell } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -107,7 +107,7 @@ export function PairingSection() {
               ) : (
                 <>
                   <KeyRound className="w-4 h-4 mr-2" />
-                  Link with Phone Number
+                  Get Pairing Code
                 </>
               )}
             </Button>
@@ -117,9 +117,9 @@ export function PairingSection() {
                 <CheckCircle2 className="w-3 h-3" /> සම්බන්ධ වීමට පියවර:
               </h5>
               <div className="text-[10px] text-muted-foreground leading-relaxed space-y-2">
-                <p>1. දුරකථන අංකය නිවැරදිව ඇතුළත් කර "Link with Phone Number" ක්ලික් කරන්න.</p>
+                <p>1. දුරකථන අංකය නිවැරදිව ඇතුළත් කර "Get Pairing Code" ක්ලික් කරන්න.</p>
                 <p>2. දුරකථනයට <b>"Are you trying to link a device?"</b> ලෙස ලැබෙන Notification එක ක්ලික් කරන්න.</p>
-                <p>3. Notification එක ලැබුණේ නැතිනම්: <b>Settings &gt; Linked Devices &gt; Link a Device &gt; Link with phone number</b> වෙත යන්න.</p>
+                <p>3. Notification එක ලැබුණේ නැතිනම්: <b>WhatsApp &gt; Settings &gt; Linked Devices &gt; Link a Device &gt; Link with phone number instead</b> වෙත යන්න.</p>
               </div>
             </div>
           </div>
@@ -138,14 +138,14 @@ export function PairingSection() {
             </div>
             
             <div className="p-3 bg-accent/5 border border-accent/20 rounded-lg flex items-center gap-3 animate-pulse">
-              <Loader2 className="w-4 h-4 text-accent animate-spin" />
+              <Bell className="w-4 h-4 text-accent" />
               <p className="text-[11px] font-bold text-accent uppercase tracking-wider">දැන් දුරකථනයට පැමිණි Notification එක බලන්න...</p>
             </div>
 
             <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">!</div>
-                <p className="text-[11px]">Notification එක ලැබුණේ නැතිනම්, WhatsApp හි <b>Linked Devices &gt; Link with phone number</b> වෙත ගොස් මෙම කේතය ඇතුළත් කරන්න.</p>
+                <p className="text-[11px]">Notification එක ලැබුණේ නැතිනම්, WhatsApp හි <b>Linked Devices &gt; Link with phone number instead</b> වෙත ගොස් මෙම කේතය ඇතුළත් කරන්න.</p>
               </div>
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">!</div>

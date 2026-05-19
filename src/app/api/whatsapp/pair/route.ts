@@ -6,8 +6,8 @@ import path from 'path';
 import os from 'os';
 
 /**
- * WhatsApp Pairing API Route - V8 (Ultimate Web-Standard Stability)
- * macOS Safari Desktop Identity එක භාවිතා කරමින් web.whatsapp.com ආකාරයටම සම්බන්ධ වීමට සකස් කර ඇත.
+ * WhatsApp Pairing API Route - V10 (Notification Priority)
+ * macOS Safari Identity එක භාවිතා කරමින් දුරකථනයට Notification එකක් ලැබීමට ප්‍රමුඛතාවය ලබා දී ඇත.
  */
 export const maxDuration = 60; 
 
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     }
 
     // 2. අලුත්ම සෙෂන් එකක් සඳහා තාවකාලික ෆෝල්ඩරයක් සෑදීම
-    const sessionId = `sithu_clean_${Date.now()}_${sanitizedNumber}`;
+    const sessionId = `sithu_v10_${Date.now()}`;
     sessionPath = path.join(os.tmpdir(), sessionId);
     
     if (!fs.existsSync(sessionPath)) {
@@ -54,17 +54,17 @@ export async function POST(req: Request) {
       console.log("Using default version");
     }
 
-    // 3. Socket එක ආරම්භ කිරීම (macOS Safari 17.2.1 Identity)
-    // Notification එක ගෙන්වා ගැනීමට සහ 'Couldn't link' වැළැක්වීමට මෙය අත්‍යවශ්‍යයි.
+    // 3. Socket එක ආරම්භ කිරීම (macOS Safari Identity)
+    // Notification එක ගෙන්වා ගැනීමට Browsers.macOS('Safari') වඩාත් සුදුසුයි.
     const sock = makeWASocket({
       version: version as any,
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }) as any,
-      browser: ['Mac OS', 'Safari', '17.2.1'], 
+      browser: Browsers.macOS('Safari'), 
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 0,
-      keepAliveIntervalMs: 15000,
+      keepAliveIntervalMs: 30000,
       generateHighQualityLinkPreview: true,
       syncFullHistory: false,
       markOnlineOnConnect: true,
@@ -74,8 +74,8 @@ export async function POST(req: Request) {
     sock.ev.on('creds.update', saveCreds);
 
     // 4. සර්වර් එක WhatsApp සමඟ ස්ථාවර සම්බන්ධතාවයක් ගොඩනගා ගන්නා තෙක් රැඳී සිටීම
-    // Notification එක සක්‍රීය වීමට Socket එක 'Ready' විය යුතුය.
-    await delay(12000); 
+    // Notification එකක් trigger වීමට Socket එක 'Online' විය යුතුය.
+    await delay(15000); 
 
     if (!sock.authState.creds.registered) {
       try {
