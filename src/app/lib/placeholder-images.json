@@ -1,0 +1,22 @@
+{
+  "placeholderImages": [
+    {
+      "id": "music-hero",
+      "description": "Abstract musical rhythms and technology background",
+      "imageUrl": "https://picsum.photos/seed/musicbot/1200/600",
+      "imageHint": "music technology"
+    },
+    {
+      "id": "album-art-1",
+      "description": "Neon vibes album cover",
+      "imageUrl": "https://picsum.photos/seed/album1/400/400",
+      "imageHint": "album art"
+    },
+    {
+      "id": "album-art-2",
+      "description": "Acoustic chill album cover",
+      "imageUrl": "https://picsum.photos/seed/album2/400/400",
+      "imageHint": "music cover"
+    }
+  ]
+}
