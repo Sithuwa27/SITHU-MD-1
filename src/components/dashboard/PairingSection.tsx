@@ -114,13 +114,12 @@ export function PairingSection() {
             
             <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
               <h5 className="text-xs font-bold text-primary mb-2 uppercase tracking-wider flex items-center gap-2">
-                <Smartphone className="w-3 h-3" /> උපදෙස් (Instructions)
+                <Smartphone className="w-3 h-3" /> වැදගත් උපදෙස්
               </h5>
               <div className="text-[10px] text-muted-foreground leading-relaxed space-y-1">
-                <p>1. මෙහි ලැබෙන අංක 8 කේතය (Code) සටහන් කර ගන්න.</p>
-                <p>2. දුරකථනයේ <b>Settings &gt; Linked Devices &gt; Link a Device</b> වෙත යන්න.</p>
-                <p>3. එහිදී <b>"Link with phone number instead"</b> තෝරාගන්න.</p>
-                <p>4. මෙහි ලැබෙන කේතය එහි ඇතුළත් කරන්න.</p>
+                <p>• මෙහි ඇතුළත් කරන අංකය ඔබගේ දුරකථනයේ ඇති WhatsApp අංකයම විය යුතුය.</p>
+                <p>• කේතය ලැබුණු පසු දුරකථනයේ <b>Settings &gt; Linked Devices &gt; Link a Device</b> වෙත යන්න.</p>
+                <p>• එහිදී <b>"Link with phone number instead"</b> තෝරා කේතය ඇතුළත් කරන්න.</p>
               </div>
             </div>
           </div>
@@ -146,15 +145,15 @@ export function PairingSection() {
             <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">1</div>
-                <p>Open WhatsApp &gt; Settings &gt; Linked Devices</p>
+                <p>දුරකථනයේ <b>Linked Devices</b> වෙත යන්න.</p>
               </div>
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">2</div>
-                <p>Tap <b>"Link with phone number instead"</b></p>
+                <p><b>"Link with phone number instead"</b> තෝරන්න.</p>
               </div>
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">3</div>
-                <p>Enter the code: <b>{pairCode}</b></p>
+                <p>මෙම කේතය ඇතුළත් කරන්න: <b>{pairCode}</b></p>
               </div>
             </div>
 

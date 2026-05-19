@@ -7,24 +7,27 @@ import os from 'os';
 
 /**
  * WhatsApp Pairing API Route
- * This route initializes a Baileys socket and requests a pairing code.
+ * Provides a dynamic pairing code using @whiskeysockets/baileys
  */
-export const maxDuration = 60; // Maximize duration for long-running socket connection
+export const maxDuration = 60; 
 
 export async function POST(req: Request) {
   let sessionPath = '';
   try {
     const { phoneNumber } = await req.json();
     
-    // 1. Clean the phone number
+    // 1. Clean and normalize the phone number
     let sanitizedNumber = phoneNumber?.replace(/\D/g, '');
     
-    // 2. Handle Sri Lankan numbers starting with 0
+    // Handle Sri Lankan format: 077... -> 9477...
     if (sanitizedNumber.startsWith('0') && sanitizedNumber.length === 10) {
       sanitizedNumber = '94' + sanitizedNumber.substring(1);
     }
+    // Handle cases where country code might be missing but starts with 7...
+    if (sanitizedNumber.length === 9 && (sanitizedNumber.startsWith('7') || sanitizedNumber.startsWith('1'))) {
+      sanitizedNumber = '94' + sanitizedNumber;
+    }
     
-    // 3. Validation
     if (!sanitizedNumber || sanitizedNumber.length < 10) {
       return NextResponse.json({ 
         success: false, 
@@ -32,17 +35,15 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // 4. Session management
-    // We use a specific folder for each number to avoid multi-session conflicts
+    // 2. Clean temporary session directory for a fresh attempt
     const sessionId = `sithu_session_${sanitizedNumber}`;
     sessionPath = path.join(os.tmpdir(), sessionId);
     
-    // Clear old session if it exists to ensure a fresh pairing attempt
     if (fs.existsSync(sessionPath)) {
       try {
         fs.rmSync(sessionPath, { recursive: true, force: true });
       } catch (e) {
-        console.error("Error clearing old session:", e);
+        console.error("Session cleanup error:", e);
       }
     }
     
@@ -51,29 +52,30 @@ export async function POST(req: Request) {
     const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
     const { version } = await fetchLatestBaileysVersion();
 
+    // 3. Initialize the socket
     const sock = makeWASocket({
       version,
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }) as any,
-      browser: Browsers.ubuntu('Chrome'), // Ubuntu Chrome matches better for many servers
+      browser: Browsers.ubuntu('Chrome'), // Ubuntu Chrome is stable for pairing
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 0,
       keepAliveIntervalMs: 15000,
     });
 
-    // Wait a bit for the socket to connect to the WhatsApp servers
-    await delay(8000); 
+    // Wait for the socket to stabilize before requesting code
+    await delay(10000); 
 
     if (!sock.authState.creds.registered) {
       try {
-        // Request the pairing code
+        // Request the 8-digit pairing code
         const code = await sock.requestPairingCode(sanitizedNumber);
         
         if (code) {
           const formattedCode = code.replace(/-/g, '').toUpperCase();
           
-          // Background listener for creds update
+          // Save credentials in background
           sock.ev.on('creds.update', saveCreds);
           
           return NextResponse.json({ 
@@ -85,24 +87,24 @@ export async function POST(req: Request) {
           throw new Error("Could not generate pairing code.");
         }
       } catch (err: any) {
-        console.error("Pairing request error:", err);
+        console.error("Pairing request failed:", err);
         return NextResponse.json({ 
           success: false, 
-          error: "වට්සැප් සර්වර් සමඟ සම්බන්ධ වීමට නොහැකි විය. ඔබගේ අංකය නිවැරදි දැයි නැවත පරීක්ෂා කරන්න." 
+          error: "වට්සැප් සර්වර් විසින් මෙම අංකය ප්‍රතික්ෂේප කරන ලදී. අංකය සහ රටේ කේතය නිවැරදි දැයි පරීක්ෂා කරන්න." 
         }, { status: 500 });
       }
     } else {
       return NextResponse.json({ 
         success: false, 
-        error: "මෙම අංකය දැනටමත් සම්බන්ධ වී ඇත (Already Connected)." 
+        error: "මෙම අංකය දැනටමත් සම්බන්ධ වී ඇත. කරුණාකර වෙනත් අංකයක් උත්සාහ කරන්න." 
       }, { status: 400 });
     }
 
   } catch (error: any) {
-    console.error("Critical WhatsApp API Error:", error);
+    console.error("WhatsApp API critical failure:", error);
     return NextResponse.json({ 
       success: false, 
-      error: "පද්ධති දෝෂයකි. කරුණාකර නැවත උත්සාහ කරන්න." 
+      error: "සම්බන්ධතාවය බිඳ වැටුණි. කරුණාකර මඳ වේලාවකින් නැවත උත්සාහ කරන්න." 
     }, { status: 500 });
   }
 }
