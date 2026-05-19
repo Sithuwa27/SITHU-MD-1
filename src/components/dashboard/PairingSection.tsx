@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Smartphone, RefreshCw, KeyRound, CheckCircle2, AlertCircle } from "lucide-react";
+import { Smartphone, RefreshCw, KeyRound, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 export function PairingSection() {
@@ -16,8 +16,8 @@ export function PairingSection() {
     if (!phoneNumber) {
       toast({
         variant: "destructive",
-        title: "Missing Information",
-        description: "Please enter your phone number with country code.",
+        title: "අංකය අවශ්‍යයි",
+        description: "කරුණාකර ඔබගේ දුරකථන අංකය ඇතුළත් කරන්න.",
       });
       return;
     }
@@ -39,22 +39,22 @@ export function PairingSection() {
       if (data.success && data.code) {
         setPairCode(data.code);
         toast({
-          title: "Code Generated",
-          description: "Enter this code on your WhatsApp mobile app to link the bot.",
+          title: "සාර්ථකයි!",
+          description: "ලබා දී ඇති කෝඩ් එක ඔබේ WhatsApp ඇප් එකේ ඇතුළත් කරන්න.",
         });
       } else {
         toast({
           variant: "destructive",
-          title: "Connection Failed",
-          description: data.error || "Could not retrieve pairing code. Try a different number format.",
+          title: "සම්බන්ධතාවය අසාර්ථකයි",
+          description: data.error || "කෝඩ් එක ලබාගත නොහැකි විය. නැවත උත්සාහ කරන්න.",
         });
       }
     } catch (error) {
       console.error("Pairing fetch error:", error);
       toast({
         variant: "destructive",
-        title: "System Error",
-        description: "The connection timed out or the server is busy. Please try again.",
+        title: "පද්ධති දෝෂයක්",
+        description: "සර්වර් එක සම්බන්ධ කර ගැනීමට නොහැකි විය. කරුණාකර ටික වේලාවකින් උත්සාහ කරන්න.",
       });
     } finally {
       setIsLoading(false);
@@ -68,68 +68,77 @@ export function PairingSection() {
           <Smartphone className="w-5 h-5" />
           <span className="text-sm font-medium uppercase tracking-widest">Setup</span>
         </div>
-        <CardTitle className="text-2xl font-headline">WhatsApp Pairing</CardTitle>
+        <CardTitle className="text-2xl font-headline font-bold">WhatsApp Pairing</CardTitle>
         <CardDescription>
-          Securely link SITHU MD to your WhatsApp account via pair code.
+          ඔබේ WhatsApp ගිණුම ආරක්ෂිතව SITHU MD සමඟ සම්බන්ධ කරන්න.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {!pairCode ? (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">Phone Number (with country code)</label>
+              <label className="text-sm text-muted-foreground font-medium">Phone Number (With Country Code)</label>
               <Input 
-                placeholder="e.g. 94771234567" 
+                placeholder="උදා: 94771234567" 
                 value={phoneNumber} 
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="bg-background/50 border-white/10"
+                className="bg-background/50 border-white/10 h-12 text-lg"
                 disabled={isLoading}
               />
-              <p className="text-[10px] text-muted-foreground italic flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> No spaces or "+" required.
+              <p className="text-[11px] text-muted-foreground italic flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" /> "+" ලකුණ හෝ හිස්තැන් අවශ්‍ය නොවේ.
               </p>
             </div>
             <Button 
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 shadow-lg shadow-primary/20"
               onClick={handlePairing}
               disabled={isLoading || !phoneNumber}
             >
-              {isLoading ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <KeyRound className="w-4 h-4 mr-2" />}
-              {isLoading ? "Generating Code..." : "Get Pairing Code"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  කෝඩ් එක ජනනය කරමින්...
+                </>
+              ) : (
+                <>
+                  <KeyRound className="w-4 h-4 mr-2" />
+                  Get Pairing Code
+                </>
+              )}
             </Button>
           </div>
         ) : (
           <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="flex flex-col items-center justify-center p-8 bg-background/80 rounded-2xl border border-primary/20 gap-4">
-              <p className="text-sm text-muted-foreground uppercase tracking-widest font-medium">Your 8-Digit Code</p>
+            <div className="flex flex-col items-center justify-center p-8 bg-black/40 rounded-2xl border border-primary/20 gap-4 shadow-inner">
+              <p className="text-xs text-muted-foreground uppercase tracking-[0.2em] font-bold">Your 8-Digit Code</p>
               <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
                 {pairCode.split("").map((char, i) => (
-                  <div key={i} className="w-10 h-14 flex items-center justify-center bg-card border border-white/10 rounded-lg text-2xl font-mono font-bold text-accent shadow-[0_0_15px_rgba(0,255,255,0.1)]">
+                  <div key={i} className="w-10 h-14 flex items-center justify-center bg-card border border-white/10 rounded-lg text-2xl font-mono font-black text-accent shadow-[0_0_20px_rgba(0,255,255,0.1)]">
                     {char}
                   </div>
                 ))}
               </div>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4 bg-white/5 p-4 rounded-xl border border-white/5">
               <div className="flex items-start gap-3 text-sm">
-                <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent"><CheckCircle2 className="w-4 h-4" /></div>
-                <p>Open WhatsApp &gt; Linked Devices &gt; Link a Device</p>
+                <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent"><CheckCircle2 className="w-3.5 h-3.5" /></div>
+                <p>WhatsApp &gt; Linked Devices &gt; Link a Device</p>
               </div>
               <div className="flex items-start gap-3 text-sm">
-                <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent"><CheckCircle2 className="w-4 h-4" /></div>
+                <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent"><CheckCircle2 className="w-3.5 h-3.5" /></div>
                 <p>Tap "Link with phone number instead"</p>
               </div>
               <div className="flex items-start gap-3 text-sm">
-                <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent"><CheckCircle2 className="w-4 h-4" /></div>
-                <p>Enter the 8-digit code displayed above</p>
+                <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent"><CheckCircle2 className="w-3.5 h-3.5" /></div>
+                <p>ඉහත දැක්වෙන ඉලක්කම් 8 ඔබේ දුරකථනයට ඇතුළත් කරන්න.</p>
               </div>
             </div>
             <Button 
               variant="outline" 
-              className="w-full border-white/10 hover:bg-white/5"
+              className="w-full border-white/10 hover:bg-white/5 font-bold"
               onClick={() => setPairCode(null)}
             >
-              Back to Start
+              ආපසු (Back)
             </Button>
           </div>
         )}
