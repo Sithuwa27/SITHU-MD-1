@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Smartphone as Mobile, KeyRound, AlertCircle, Loader2, Info, RefreshCw, Smartphone, ShieldCheck } from "lucide-react";
+import { Smartphone as Mobile, KeyRound, AlertCircle, Loader2, Info, RefreshCw, Smartphone, ShieldCheck, BellRing } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -45,8 +45,8 @@ export function PairingSection() {
         setPairCode(data.code);
         setUsedNumber(data.numberUsed);
         toast({
-          title: "කේතය සාර්ථකව ලැබුණා!",
-          description: "දැන් මෙය ඔබගේ දුරකථනයේ ඇතුළත් කරන්න.",
+          title: "Pairing Code එක ලැබුණා!",
+          description: "දැන් ඔබගේ දුරකථනය පරීක්ෂා කරන්න.",
         });
       } else {
         setServerError(data.error || "කේතය ලබාගත නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.");
@@ -82,7 +82,7 @@ export function PairingSection() {
         {!pairCode ? (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm text-muted-foreground font-medium">දුරකථන අංකය (රටේ කේතය සමඟ)</label>
+              <label className="text-sm text-muted-foreground font-medium">දුරකථන අංකය (94771234567)</label>
               <Input 
                 placeholder="උදා: 94771234567" 
                 value={phoneNumber} 
@@ -91,7 +91,7 @@ export function PairingSection() {
                 disabled={isLoading}
               />
               <p className="text-[11px] text-muted-foreground italic flex items-center gap-1">
-                <Info className="w-3 h-3" /> 0 වෙනුවට 94 භාවිතා කරන්න. (+ ලකුණ අවශ්‍ය නැත)
+                <Info className="w-3 h-3" /> රටේ කේතය (94) සමඟ අංකය ඇතුළත් කරන්න.
               </p>
             </div>
             <Button 
@@ -114,12 +114,11 @@ export function PairingSection() {
             
             <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
               <h5 className="text-xs font-bold text-primary mb-2 uppercase tracking-wider flex items-center gap-2">
-                <Smartphone className="w-3 h-3" /> වැදගත් උපදෙස්
+                <BellRing className="w-3 h-3" /> උපදෙස්
               </h5>
-              <div className="text-[10px] text-muted-foreground leading-relaxed space-y-1">
-                <p>• මෙහි ඇතුළත් කරන අංකය ඔබගේ දුරකථනයේ ඇති WhatsApp අංකයම විය යුතුය.</p>
-                <p>• කේතය ලැබුණු පසු දුරකථනයේ <b>Settings &gt; Linked Devices &gt; Link a Device</b> වෙත යන්න.</p>
-                <p>• එහිදී <b>"Link with phone number instead"</b> තෝරා කේතය ඇතුළත් කරන්න.</p>
+              <div className="text-[10px] text-muted-foreground leading-relaxed space-y-2">
+                <p>• අංකය ලබා දුන් පසු දුරකථනයට Notification එකක් ලැබිය හැක. එය ක්ලික් කර කේතය ඇතුළත් කරන්න.</p>
+                <p>• Notification එකක් නොලැබුණහොත්: <b>Settings &gt; Linked Devices &gt; Link a Device &gt; Link with phone number instead</b> වෙත යන්න.</p>
               </div>
             </div>
           </div>
@@ -139,17 +138,17 @@ export function PairingSection() {
             
             <div className="p-3 bg-accent/5 border border-accent/20 rounded-lg flex items-center gap-3 animate-pulse">
               <Loader2 className="w-4 h-4 text-accent animate-spin" />
-              <p className="text-[11px] font-bold text-accent uppercase tracking-wider">කරුණාකර දැන් කේතය දුරකථනයට ඇතුළත් කරන්න...</p>
+              <p className="text-[11px] font-bold text-accent uppercase tracking-wider">දැන් කේතය දුරකථනයට ඇතුළත් කරන්න...</p>
             </div>
 
             <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">1</div>
-                <p>දුරකථනයේ <b>Linked Devices</b> වෙත යන්න.</p>
+                <p>දුරකථනයට ලැබෙන Notification එක ක්ලික් කරන්න.</p>
               </div>
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">2</div>
-                <p><b>"Link with phone number instead"</b> තෝරන්න.</p>
+                <p>එසේ නැතිනම් <b>"Link with phone number instead"</b> තෝරන්න.</p>
               </div>
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">3</div>
@@ -169,7 +168,7 @@ export function PairingSection() {
             </Button>
             
             <p className="text-[9px] text-center text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-1">
-              <ShieldCheck className="w-3 h-3" /> Secure End-to-End Handshake
+              <ShieldCheck className="w-3 h-3" /> macOS Desktop Handshake Active
             </p>
           </div>
         )}
