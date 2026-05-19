@@ -1,40 +1,23 @@
+
 import { NextResponse } from 'next/server';
 import makeWASocket, { useMultiFileAuthState, fetchLatestBaileysVersion, delay, Browsers } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import QRCode from 'qrcode';
 
 /**
- * WhatsApp Pairing API Route - V11 (Notification Focus)
- * macOS Chrome Identity භාවිතා කරමින් දුරකථනයට Notification එකක් ලැබීමට ඇති ඉඩකඩ උපරිම කර ඇත.
+ * WhatsApp QR Connection API Route
+ * Generates a QR code for the user to scan, similar to WhatsApp Web.
  */
 export const maxDuration = 60; 
 
 export async function POST(req: Request) {
   let sessionPath = '';
   try {
-    const { phoneNumber } = await req.json();
-    
-    // 1. දුරකථන අංකය පිරිසිදු කිරීම (Strict Normalization)
-    let sanitizedNumber = phoneNumber?.replace(/\D/g, '');
-    
-    // ශ්‍රී ලංකාවේ අංකයක් නම් 94 ආකෘතියට හැරවීම
-    if (sanitizedNumber.startsWith('0') && sanitizedNumber.length === 10) {
-      sanitizedNumber = '94' + sanitizedNumber.substring(1);
-    } else if (sanitizedNumber.length === 9) {
-      sanitizedNumber = '94' + sanitizedNumber;
-    }
-    
-    if (!sanitizedNumber || sanitizedNumber.length < 10) {
-      return NextResponse.json({ 
-        success: false, 
-        error: "කරුණාකර නිවැරදි දුරකථන අංකය ඇතුළත් කරන්න (උදා: 94771234567)." 
-      }, { status: 400 });
-    }
-
-    // 2. සෙෂන් එක සඳහා තාවකාලික ෆෝල්ඩරයක් සෑදීම
-    const sessionId = `sithu_v11_${Date.now()}`;
+    // 1. සෙෂන් එක සඳහා තාවකාලික ෆෝල්ඩරයක් සෑදීම
+    const sessionId = `sithu_qr_${Date.now()}`;
     sessionPath = path.join(os.tmpdir(), sessionId);
     
     if (!fs.existsSync(sessionPath)) {
@@ -43,7 +26,6 @@ export async function POST(req: Request) {
 
     const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
     
-    // Baileys version එක ලබා ගැනීම
     let version: [number, number, number] = [2, 3000, 1015901307];
     try {
       const latest = await fetchLatestBaileysVersion();
@@ -54,55 +36,50 @@ export async function POST(req: Request) {
       console.log("Using default version");
     }
 
-    // 3. Socket එක ආරම්භ කිරීම (macOS Chrome Identity for Notification Trigger)
+    // 2. Socket එක ආරම්භ කිරීම
     const sock = makeWASocket({
       version: version as any,
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }) as any,
-      browser: Browsers.macOS('Chrome'), 
+      browser: Browsers.macOS('Desktop'), 
       connectTimeoutMs: 60000,
-      defaultQueryTimeoutMs: 0,
-      keepAliveIntervalMs: 30000,
-      markOnlineOnConnect: true,
-      syncFullHistory: false,
-      generateHighQualityLinkPreview: true,
     });
 
-    // Creds update කිරීම
     sock.ev.on('creds.update', saveCreds);
 
-    // 4. සර්වර් එක WhatsApp සමඟ ස්ථාවර වන තෙක් තත්පර 15 ක් රැඳී සිටීම
-    // මෙය දුරකථනයට Notification එකක් ලැබීමට ඇති ඉඩකඩ වැඩි කරයි.
-    await delay(15000); 
-
-    if (!sock.authState.creds.registered) {
-      try {
-        // Pairing code එක ඉල්ලා සිටීම (මෙය ඔබගේ දුරකථනයට Notification එකක් ගෙන එනු ඇත)
-        const code = await sock.requestPairingCode(sanitizedNumber);
-        
-        if (code) {
-          return NextResponse.json({ 
-            success: true, 
-            code: code.toUpperCase(),
-            numberUsed: sanitizedNumber,
-            message: "කේතය සාර්ථකව ලැබුණි. ඔබගේ දුරකථනයට ලැබුණු Notification එක ක්ලික් කරන්න."
-          });
-        } else {
-          throw new Error("Empty code returned");
+    // 3. QR කේතය ලැබෙන තෙක් රැඳී සිටීම
+    const qrPromise = new Promise<string>((resolve, reject) => {
+      sock.ev.on('connection.update', (update) => {
+        const { qr, connection } = update;
+        if (qr) {
+          resolve(qr);
         }
-      } catch (err: any) {
-        console.error("Pairing request failed:", err);
-        return NextResponse.json({ 
-          success: false, 
-          error: "WhatsApp විසින් සම්බන්ධතාවය ප්‍රතික්ෂේප කරන ලදී. අංකය පරීක්ෂා කරන්න." 
-        }, { status: 500 });
-      }
-    } else {
+        if (connection === 'open') {
+          // Already connected
+          reject(new Error('Already connected'));
+        }
+      });
+
+      // Timeout after 30 seconds
+      setTimeout(() => reject(new Error('QR Timeout')), 30000);
+    });
+
+    try {
+      const qrString = await qrPromise;
+      const qrDataUri = await QRCode.toDataURL(qrString);
+      
+      return NextResponse.json({ 
+        success: true, 
+        qr: qrDataUri,
+        message: "QR කේතය සාර්ථකව ලැබුණි. කරුණාකර එය ස්කෑන් කරන්න."
+      });
+    } catch (err: any) {
+      console.error("QR Generation failed:", err);
       return NextResponse.json({ 
         success: false, 
-        error: "මෙම අංකය දැනටමත් සම්බන්ධ වී ඇත." 
-      }, { status: 400 });
+        error: err.message === 'QR Timeout' ? "QR කේතය ලබා ගැනීමට ප්‍රමාද වැඩියි. නැවත උත්සාහ කරන්න." : "සම්බන්ධතාවය ස්ථාපිත කිරීමට නොහැකි විය." 
+      }, { status: 500 });
     }
 
   } catch (error: any) {
