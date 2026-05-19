@@ -7,6 +7,7 @@ import os from 'os';
 
 /**
  * WhatsApp Pairing API Route - V5 (Stable macOS Identity)
+ * macOS වල මෙන්ම සාර්ථකව සම්බන්ධ වීමට මෙය සකස් කර ඇත.
  */
 export const maxDuration = 60; 
 
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
   try {
     const { phoneNumber } = await req.json();
     
-    // 1. Precise Normalization for Sri Lankan Numbers
+    // 1. ශ්‍රී ලංකාවේ අංක පිරිසිදු කිරීම (Normalization)
     let sanitizedNumber = phoneNumber?.replace(/\D/g, '');
     
     if (sanitizedNumber.startsWith('0') && sanitizedNumber.length === 10) {
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // 2. Setup a unique session directory and CLEAR it for fresh pairing
+    // 2. සෙෂන් එක සඳහා අලුත් තාවකාලික ෆෝල්ඩරයක් සෑදීම
     const sessionId = `sithu_v5_${sanitizedNumber}`;
     sessionPath = path.join(os.tmpdir(), sessionId);
     
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
 
     const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
     
-    // Fetch latest version safely
+    // Baileys version එක ලබා ගැනීම
     let version: [number, number, number] = [2, 3000, 1015901307];
     try {
       const latest = await fetchLatestBaileysVersion();
@@ -57,32 +58,32 @@ export async function POST(req: Request) {
       console.log("Using default Baileys version");
     }
 
-    // 3. Initialize the socket mimicking macOS Desktop (Crucial for stability)
+    // 3. Socket එක ආරම්භ කිරීම (macOS Desktop ලෙස පෙනී සිටීම)
     const sock = makeWASocket({
       version: version as any,
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }) as any,
-      // Mimic macOS exactly to avoid "Couldn't link device" errors
+      // macOS Chrome ලෙස හඳුනා ගැනීමට (Crucial for stability)
       browser: ['Mac OS', 'Chrome', '121.0.6167.184'], 
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 0,
       keepAliveIntervalMs: 15000,
     });
 
-    // Handle credentials updates
+    // Creds update කිරීම
     sock.ev.on('creds.update', saveCreds);
 
-    // 4. Wait for the handshake to complete
+    // 4. Handshake එක සඳහා මඳ වේලාවක් රැඳී සිටීම
+    // මෙය දුරකථනයට Notification එක ලැබීමට උපකාරී වේ.
     await delay(8000); 
 
     if (!sock.authState.creds.registered) {
       try {
-        // Request the 8-digit pairing code
+        // Pairing code එක ඉල්ලා සිටීම
         const code = await sock.requestPairingCode(sanitizedNumber);
         
         if (code) {
-          // Return the code as-is (usually format is ABCD-EFGH)
           return NextResponse.json({ 
             success: true, 
             code: code.toUpperCase(),
