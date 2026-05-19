@@ -8,6 +8,7 @@ import os from 'os';
 /**
  * WhatsApp Pairing API Route
  * Provides a dynamic pairing code using @whiskeysockets/baileys
+ * Updated to mimic macOS for better compatibility as requested.
  */
 export const maxDuration = 60; 
 
@@ -17,6 +18,7 @@ export async function POST(req: Request) {
     const { phoneNumber } = await req.json();
     
     // 1. Clean and normalize the phone number
+    // Remove all non-numeric characters (including + sign)
     let sanitizedNumber = phoneNumber?.replace(/\D/g, '');
     
     // Handle Sri Lankan format: 077... -> 9477...
@@ -36,6 +38,7 @@ export async function POST(req: Request) {
     }
 
     // 2. Clean temporary session directory for a fresh attempt
+    // Using a unique session ID based on number to avoid conflicts
     const sessionId = `sithu_session_${sanitizedNumber}`;
     sessionPath = path.join(os.tmpdir(), sessionId);
     
@@ -58,13 +61,15 @@ export async function POST(req: Request) {
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }) as any,
-      browser: Browsers.ubuntu('Chrome'), // Ubuntu Chrome is stable for pairing
+      // Mimic macOS Desktop as it is known to be more stable for pairing
+      browser: Browsers.macOS('Desktop'), 
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 0,
       keepAliveIntervalMs: 15000,
     });
 
     // Wait for the socket to stabilize before requesting code
+    // This delay is crucial for the handshake to initiate properly
     await delay(10000); 
 
     if (!sock.authState.creds.registered) {
@@ -75,7 +80,7 @@ export async function POST(req: Request) {
         if (code) {
           const formattedCode = code.replace(/-/g, '').toUpperCase();
           
-          // Save credentials in background
+          // Background listener for credential updates
           sock.ev.on('creds.update', saveCreds);
           
           return NextResponse.json({ 
