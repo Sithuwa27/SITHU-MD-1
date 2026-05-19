@@ -118,7 +118,7 @@ export function PairingSection() {
               </h5>
               <div className="text-[10px] text-muted-foreground leading-relaxed space-y-2">
                 <p>1. දුරකථන අංකය නිවැරදිව (Country Code සමඟ) ඇතුළත් කර කෝඩ් එක ලබා ගන්න.</p>
-                <p>2. දුරකථනයට Notification එකක් ආවහොත් එය ක්ලික් කරන්න.</p>
+                <p>2. දුරකථනයට "Are you trying to link a device?" ලෙස Notification එකක් ලැබෙනු ඇත. එය ක්ලික් කරන්න.</p>
                 <p>3. Notification එකක් ආවේ නැතිනම්: <b>Settings &gt; Linked Devices &gt; Link a Device &gt; Link with phone number</b> වෙත යන්න.</p>
               </div>
             </div>
@@ -145,7 +145,7 @@ export function PairingSection() {
             <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">!</div>
-                <p className="text-xs">වැදගත්: දුරකථනයේ ඇති අංකය සහ <b>+{usedNumber}</b> සමාන දැයි නැවත පරීක්ෂා කරන්න.</p>
+                <p className="text-xs">වැදගත්: දුරකථනයට පැමිණි Notification එක ක්ලික් කර මෙම කේතය ලබා දෙන්න.</p>
               </div>
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">!</div>

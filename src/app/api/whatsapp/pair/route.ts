@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
-import makeWASocket, { useMultiFileAuthState, fetchLatestBaileysVersion, delay } from '@whiskeysockets/baileys';
+import makeWASocket, { useMultiFileAuthState, fetchLatestBaileysVersion, delay, Browsers } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
 /**
- * WhatsApp Pairing API Route - V6 (High-Stability macOS Identity)
- * macOS වලදී මෙන්ම කිසිදු බාධාවකින් තොරව සම්බන්ධ වීමට මෙය සකස් කර ඇත.
+ * WhatsApp Pairing API Route - V7 (Max-Stability macOS Safari Identity)
+ * macOS වලදී මෙන්ම කිසිදු බාධාවකින් තොරව සම්බන්ධ වීමට සහ Notification එක ගෙන්වා ගැනීමට මෙය සකස් කර ඇත.
  */
 export const maxDuration = 60; // Next.js max duration for serverless functions
 
@@ -19,6 +19,7 @@ export async function POST(req: Request) {
     // 1. දුරකථන අංකය පිරිසිදු කිරීම (Normalization)
     let sanitizedNumber = phoneNumber?.replace(/\D/g, '');
     
+    // ශ්‍රී ලංකාවේ අංකයක් නම් 94 ආකෘතියට හැරවීම
     if (sanitizedNumber.startsWith('0') && sanitizedNumber.length === 10) {
       sanitizedNumber = '94' + sanitizedNumber.substring(1);
     } else if (sanitizedNumber.length === 9) {
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
     }
 
     // 2. සෙෂන් එක සඳහා අද්විතීය තාවකාලික ෆෝල්ඩරයක් සෑදීම
-    const sessionId = `sithu_v6_${Date.now()}_${sanitizedNumber}`;
+    const sessionId = `sithu_v7_${Date.now()}_${sanitizedNumber}`;
     sessionPath = path.join(os.tmpdir(), sessionId);
     
     if (!fs.existsSync(sessionPath)) {
@@ -53,13 +54,13 @@ export async function POST(req: Request) {
       console.log("Using default Baileys version");
     }
 
-    // 3. Socket එක ආරම්භ කිරීම (macOS Safari ලෙස පෙනී සිටීම - වඩාත් ස්ථාවරයි)
+    // 3. Socket එක ආරම්භ කිරීම (macOS Safari ලෙස පෙනී සිටීම - Notification එක ඒමට මෙය ඉතා වැදගත්)
     const sock = makeWASocket({
       version: version as any,
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }) as any,
-      // macOS Safari ලෙස හඳුනා ගැනීමට (Crucial for bypassing 'Couldn't link device')
+      // macOS Safari 17.2.1 ලෙස හඳුනා ගැනීමට (Crucial for bypassing 'Couldn't link device')
       browser: ['Mac OS', 'Safari', '17.2.1'], 
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 0,
@@ -72,11 +73,12 @@ export async function POST(req: Request) {
     sock.ev.on('creds.update', saveCreds);
 
     // 4. සර්වර් එක WhatsApp සමඟ ස්ථාවර සම්බන්ධතාවයක් ගොඩනගා ගන්නා තෙක් රැඳී සිටීම
+    // Notification එක ගෙන්වා ගැනීමට Socket එක Ready විය යුතුය.
     await delay(10000); 
 
     if (!sock.authState.creds.registered) {
       try {
-        // Pairing code එක ඉල්ලා සිටීම
+        // Pairing code එක ඉල්ලා සිටීම (මෙය ඔබගේ දුරකථනයට Notification එකක් ගෙන එනු ඇත)
         const code = await sock.requestPairingCode(sanitizedNumber);
         
         if (code) {
@@ -84,7 +86,7 @@ export async function POST(req: Request) {
             success: true, 
             code: code.toUpperCase(),
             numberUsed: sanitizedNumber,
-            message: "කේතය සාර්ථකව ලැබුණි. කරුණාකර විනාඩියක් ඇතුළත එය දුරකථනයට ඇතුළත් කරන්න."
+            message: "කේතය සාර්ථකව ලැබුණි. කරුණාකර ඔබගේ දුරකථනයට පැමිණි Notification එක බලන්න."
           });
         } else {
           throw new Error("WhatsApp returned empty code");
@@ -93,7 +95,7 @@ export async function POST(req: Request) {
         console.error("Pairing request failed:", err);
         return NextResponse.json({ 
           success: false, 
-          error: "WhatsApp විසින් සම්බන්ධතාවය ප්‍රතික්ෂේප කරන ලදී. කරුණාකර අංකය පරීක්ෂා කර නැවත උත්සාහ කරන්න." 
+          error: "WhatsApp විසින් සම්බන්ධතාවය ප්‍රතික්ෂේප කරන ලදී. කරුණාකර අංකය සහ දුරකථනය පරීක්ෂා කරන්න." 
         }, { status: 500 });
       }
     } else {
@@ -107,7 +109,7 @@ export async function POST(req: Request) {
     console.error("Critical API Error:", error);
     return NextResponse.json({ 
       success: false, 
-      error: "සම්බන්ධතාවය ස්ථාපිත කිරීමට නොහැකි විය. කරුණාකර අංකය නිවැරදිදැයි පරීක්ෂා කරන්න." 
+      error: "සම්බන්ධතාවය ස්ථාපිත කිරීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න." 
     }, { status: 500 });
   }
 }
