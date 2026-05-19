@@ -7,18 +7,21 @@ import makeWASocket, {
 import pino from 'pino';
 import fs from 'fs';
 import qrcodeTerminal from 'qrcode-terminal';
+import ytSearch from 'yt-search';
+import ytdl from '@distube/ytdl-core';
+import path from 'path';
 
 /**
  * SITHU MD Bot Standalone Script
- * QR Code Authentication Method
+ * Features: QR Auth, Song Downloader
  */
 async function startBot() {
   const sessionPath = './session_data';
+  const tempDir = './temp';
   
-  // Ensure session directory exists
-  if (!fs.existsSync(sessionPath)) {
-    fs.mkdirSync(sessionPath, { recursive: true });
-  }
+  // Ensure directories exist
+  if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
+  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
   const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
   const { version } = await fetchLatestBaileysVersion();
@@ -26,7 +29,7 @@ async function startBot() {
   const sock = makeWASocket({
     version,
     auth: state,
-    printQRInTerminal: false, // We'll handle QR manually with qrcode-terminal
+    printQRInTerminal: false,
     logger: pino({ level: 'silent' }) as any,
     browser: ['Mac OS', 'Safari', '10.15.7'],
   });
@@ -36,7 +39,6 @@ async function startBot() {
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update;
 
-    // Display QR Code if received
     if (qr) {
       console.log("\n=========================================");
       console.log("🚀 SITHU MD WHATSAPP QR CODE");
@@ -49,7 +51,7 @@ async function startBot() {
     }
 
     if (connection === 'open') {
-      console.log('\n[INFO] Bot is fully connected!');
+      console.log('\n[INFO] SITHU MD Bot is fully connected and active!');
     }
 
     if (connection === 'close') {
@@ -64,6 +66,96 @@ async function startBot() {
       } else {
         console.log('[ERROR] Logged out. Please delete "session_data" folder and restart.');
       }
+    }
+  });
+
+  // Handle Incoming Messages
+  sock.ev.on('messages.upsert', async ({ messages }) => {
+    const m = messages[0];
+    if (!m.message || m.key.fromMe) return;
+
+    const jid = m.key.remoteJid!;
+    const messageType = Object.keys(m.message)[0];
+    
+    // Extract text content from different message types
+    let text = '';
+    if (messageType === 'conversation') {
+      text = m.message.conversation || '';
+    } else if (messageType === 'extendedTextMessage') {
+      text = m.message.extendedTextMessage?.text || '';
+    } else if (messageType === 'imageMessage') {
+      text = m.message.imageMessage?.caption || '';
+    } else if (messageType === 'videoMessage') {
+      text = m.message.videoMessage?.caption || '';
+    }
+
+    const lowerText = text.toLowerCase();
+
+    // COMMAND: .song or !song
+    if (lowerText.startsWith('.song') || lowerText.startsWith('!song')) {
+      const query = text.replace(/^\.(song|!song)\s*/i, '').trim();
+      
+      if (!query) {
+        return sock.sendMessage(jid, { text: '❌ කරුණාකර ගීතයේ නම ඇතුළත් කරන්න. (උදා: .song Imagine Dragons - Bones)' });
+      }
+
+      try {
+        await sock.sendMessage(jid, { text: `🎧 *SITHU MD SEARCHING* 🎧\n\n🔎 සොයමින් පවතී: *${query}*\n\nකරුණාකර මොහොතක් රැඳී සිටින්න...` });
+
+        // Search YouTube
+        const searchResults = await ytSearch(query);
+        const video = searchResults.videos[0];
+
+        if (!video) {
+          return sock.sendMessage(jid, { text: `❌ කණගාටුයි, "${query}" සඳහා කිසිදු ප්‍රතිඵලයක් හමු නොවීය.` });
+        }
+
+        const videoUrl = video.url;
+        const fileName = `${video.videoId}.mp3`;
+        const filePath = path.join(tempDir, fileName);
+
+        // Download Audio
+        const stream = ytdl(videoUrl, { filter: 'audioonly', quality: 'highestaudio' });
+        const fileStream = fs.createWriteStream(filePath);
+        
+        stream.pipe(fileStream);
+
+        fileStream.on('finish', async () => {
+          // Send Audio Message
+          await sock.sendMessage(jid, { 
+            audio: { url: filePath }, 
+            mimetype: 'audio/mp4', 
+            ptt: false,
+            contextInfo: {
+              externalAdReply: {
+                title: video.title,
+                body: `Artist: ${video.author.name}`,
+                thumbnailUrl: video.thumbnail,
+                sourceUrl: videoUrl,
+                mediaType: 1,
+                renderLargerThumbnail: true
+              }
+            }
+          });
+
+          // Clean up temp file
+          fs.unlinkSync(filePath);
+        });
+
+        fileStream.on('error', (err) => {
+          console.error('Download error:', err);
+          sock.sendMessage(jid, { text: '❌ ගීතය බාගත කිරීමේදී දෝෂයක් සිදු විය. කරුණාකර නැවත උත්සාහ කරන්න.' });
+        });
+
+      } catch (error) {
+        console.error('Song command error:', error);
+        sock.sendMessage(jid, { text: '❌ පද්ධතියේ දෝෂයක් සිදු විය. පසුව නැවත උත්සාහ කරන්න.' });
+      }
+    }
+
+    // COMMAND: .status
+    if (lowerText === '.status') {
+      await sock.sendMessage(jid, { text: '✅ SITHU MD Bot is Online and ready to serve!' });
     }
   });
 }
