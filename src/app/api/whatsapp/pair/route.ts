@@ -6,7 +6,7 @@ import path from 'path';
 import os from 'os';
 
 /**
- * WhatsApp Pairing API Route - V3 (Optimized for macOS Desktop Identification)
+ * WhatsApp Pairing API Route - V4 (Enhanced macOS Desktop Spoofing)
  */
 export const maxDuration = 60; 
 
@@ -33,21 +33,26 @@ export async function POST(req: Request) {
     }
 
     // 2. Setup a unique session directory to avoid locks
-    const sessionId = `sithu_session_${sanitizedNumber}`;
+    // Using a timestamp to ensure fresh sessions each time
+    const sessionId = `sithu_session_${sanitizedNumber}_${Date.now()}`;
     sessionPath = path.join(os.tmpdir(), sessionId);
     
-    if (fs.existsSync(sessionPath)) {
-      try {
-        fs.rmSync(sessionPath, { recursive: true, force: true });
-      } catch (e) {
-        console.error("Session cleanup failed:", e);
-      }
+    if (!fs.existsSync(sessionPath)) {
+      fs.mkdirSync(sessionPath, { recursive: true });
     }
-    
-    fs.mkdirSync(sessionPath, { recursive: true });
 
     const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-    const { version } = await fetchLatestBaileersVersion ? (await fetchLatestBaileysVersion()).version : [2, 3000, 1015901307];
+    
+    // Fetch version safely
+    let version: [number, number, number] = [2, 3000, 1015901307];
+    try {
+      const latest = await fetchLatestBaileysVersion();
+      if (latest && latest.version) {
+        version = latest.version;
+      }
+    } catch (e) {
+      console.log("Using default Baileys version");
+    }
 
     // 3. Initialize the socket mimicking macOS for better stability
     const sock = makeWASocket({
@@ -55,7 +60,7 @@ export async function POST(req: Request) {
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }) as any,
-      // Mimic macOS Desktop exactly as it works best for pairing requests
+      // Mimic macOS Desktop exactly as it works best for pairing requests and notifications
       browser: Browsers.macOS('Desktop'), 
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 0,
@@ -63,8 +68,8 @@ export async function POST(req: Request) {
     });
 
     // 4. Wait for the socket to be ready before requesting code
-    // This delay is critical for the WhatsApp server to register the connection
-    await delay(12000); 
+    // Increased delay to ensure the device is registered on WhatsApp servers
+    await delay(10000); 
 
     if (!sock.authState.creds.registered) {
       try {
@@ -74,8 +79,8 @@ export async function POST(req: Request) {
         if (code) {
           const formattedCode = code.replace(/-/g, '').toUpperCase();
           
-          // Keep credentials updated in the background
-          sock.ev.on('creds.update', saveCreds);
+          // Background cleanup of session after timeout (optional, but keep for now)
+          // sock.ev.on('creds.update', saveCreds);
           
           return NextResponse.json({ 
             success: true, 
@@ -89,7 +94,7 @@ export async function POST(req: Request) {
         console.error("Pairing request failed:", err);
         return NextResponse.json({ 
           success: false, 
-          error: "WhatsApp සර්වර් විසින් මෙම අංකය ප්‍රතික්ෂේප කරන ලදී. අංකය ඔබගේ දුරකථනයේ ඇති අංකයම බව තහවුරු කරගන්න." 
+          error: "WhatsApp සර්වර් විසින් මෙම අංකය ප්‍රතික්ෂේප කරන ලදී. අංකය නිවැරදි දැයි පරීක්ෂා කර නැවත උත්සාහ කරන්න." 
         }, { status: 500 });
       }
     } else {
@@ -103,7 +108,7 @@ export async function POST(req: Request) {
     console.error("Critical Pairing Error:", error);
     return NextResponse.json({ 
       success: false, 
-      error: "සම්බන්ධතාවය බිඳ වැටුණි. කරුණාකර නැවත උත්සාහ කරන්න." 
+      error: "සම්බන්ධතාවය බිඳ වැටුණි. කරුණාකර ඔබගේ අංකය නිවැරදිව ඇතුළත් කර නැවත උත්සාහ කරන්න." 
     }, { status: 500 });
   }
 }

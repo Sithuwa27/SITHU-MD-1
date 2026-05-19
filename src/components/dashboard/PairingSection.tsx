@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Smartphone as Mobile, KeyRound, AlertCircle, Loader2, Info, RefreshCw, Smartphone, ShieldCheck, BellRing } from "lucide-react";
+import { Smartphone as Mobile, KeyRound, AlertCircle, Loader2, Info, RefreshCw, ShieldCheck, BellRing } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -117,7 +117,7 @@ export function PairingSection() {
                 <BellRing className="w-3 h-3" /> උපදෙස්
               </h5>
               <div className="text-[10px] text-muted-foreground leading-relaxed space-y-2">
-                <p>• අංකය ලබා දුන් පසු දුරකථනයට Notification එකක් ලැබිය හැක. එය ක්ලික් කර කේතය ඇතුළත් කරන්න.</p>
+                <p>• අංකය ලබා දුන් පසු දුරකථනයට පණිවිඩයක් (Notification) ලැබිය හැක. එය ක්ලික් කර කේතය ඇතුළත් කරන්න.</p>
                 <p>• Notification එකක් නොලැබුණහොත්: <b>Settings &gt; Linked Devices &gt; Link a Device &gt; Link with phone number instead</b> වෙත යන්න.</p>
               </div>
             </div>
