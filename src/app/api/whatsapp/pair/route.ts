@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import makeWASocket, { useMultiFileAuthState, fetchLatestBaileysVersion, Browsers, delay, DisconnectReason } from '@whiskeysockets/baileys';
+import makeWASocket, { useMultiFileAuthState, fetchLatestBaileysVersion, delay } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
@@ -17,7 +17,6 @@ export async function POST(req: Request) {
     const { phoneNumber } = await req.json();
     
     // 1. දුරකථන අංකය පිරිසිදු කිරීම (Normalization)
-    // අංකය 94771234567 වැනි නිවැරදි ජාත්‍යන්තර ආකෘතියට පත් කිරීම.
     let sanitizedNumber = phoneNumber?.replace(/\D/g, '');
     
     if (sanitizedNumber.startsWith('0') && sanitizedNumber.length === 10) {
@@ -78,12 +77,9 @@ export async function POST(req: Request) {
     if (!sock.authState.creds.registered) {
       try {
         // Pairing code එක ඉල්ලා සිටීම
-        // වැදගත්: මෙහිදී භාවිතා කරන අංකය දුරකථනයේ ඇති අංකයට 100% ක් සමාන විය යුතුය.
         const code = await sock.requestPairingCode(sanitizedNumber);
         
         if (code) {
-          // සර්වර් එකේ සෙෂන් එක විනාඩියක් පමණ සජීවීව තබා ගැනීමට උත්සාහ කිරීම
-          // එවිට ඔබ දුරකථනයෙන් කේතය ඇතුළත් කරන විට සර්වර් එක සූදානම්ව පවතී.
           return NextResponse.json({ 
             success: true, 
             code: code.toUpperCase(),
