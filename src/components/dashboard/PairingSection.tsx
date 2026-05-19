@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Smartphone, RefreshCw, KeyRound, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { requestWhatsAppPairingCode } from "@/app/actions/whatsapp-pairing";
 
 export function PairingSection() {
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -26,10 +25,18 @@ export function PairingSection() {
     
     setIsLoading(true);
     try {
-      const response = await requestWhatsAppPairingCode(phoneNumber);
+      const response = await fetch('/api/whatsapp/pair', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phoneNumber }),
+      });
       
-      if (response.success && response.code) {
-        setPairCode(response.code);
+      const data = await response.json();
+      
+      if (data.success && data.code) {
+        setPairCode(data.code);
         toast({
           title: "Code Generated",
           description: "Enter this code on your WhatsApp mobile app to link the bot.",
@@ -38,7 +45,7 @@ export function PairingSection() {
         toast({
           variant: "destructive",
           title: "Connection Failed",
-          description: response.error || "Could not retrieve pairing code.",
+          description: data.error || "Could not retrieve pairing code.",
         });
       }
     } catch (error) {
