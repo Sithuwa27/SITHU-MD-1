@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Smartphone as Mobile, KeyRound, AlertCircle, Loader2, Info, RefreshCw, Smartphone } from "lucide-react";
+import { Smartphone as Mobile, KeyRound, AlertCircle, Loader2, Info, RefreshCw, Smartphone, ShieldCheck } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -113,9 +113,11 @@ export function PairingSection() {
               <h5 className="text-xs font-bold text-primary mb-2 uppercase tracking-wider flex items-center gap-2">
                 <Smartphone className="w-3 h-3" /> උපදෙස් (Instructions)
               </h5>
-              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                මෙහිදී ඔබගේ දුරකථනයට පණිවිඩයක් (Notification) ලැබෙන්නේ නැත. කේතය ලැබුණු පසු දුරකථනයේ <b>Settings &gt; Linked Devices &gt; Link with phone number</b> වෙත ගොස් එය ඇතුළත් කරන්න.
-              </p>
+              <div className="text-[10px] text-muted-foreground leading-relaxed space-y-1">
+                <p>1. දුරකථනයට පණිවිඩයක් ලැබෙන්නේ නැත.</p>
+                <p>2. කේතය ලැබුණු පසු <b>Settings &gt; Linked Devices &gt; Link with phone number</b> වෙත යන්න.</p>
+                <p>3. කේතය ලැබී <b>විනාඩියක් ඇතුළත</b> එය දුරකථනයේ ඇතුළත් කිරීමට වගබලා ගන්න.</p>
+              </div>
             </div>
           </div>
         ) : (
@@ -131,22 +133,23 @@ export function PairingSection() {
               </div>
             </div>
             
+            <div className="p-3 bg-accent/5 border border-accent/20 rounded-lg flex items-center gap-3 animate-pulse">
+              <Loader2 className="w-4 h-4 text-accent animate-spin" />
+              <p className="text-[11px] font-bold text-accent uppercase tracking-wider">සම්බන්ධතාවය බලාපොරොත්තුවෙන්... (Waiting for Link)</p>
+            </div>
+
             <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">1</div>
-                <p>Open WhatsApp on your phone.</p>
+                <p>Open WhatsApp &gt; Settings &gt; Linked Devices</p>
               </div>
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">2</div>
-                <p>Go to <b>Settings &gt; Linked Devices &gt; Link a Device</b></p>
+                <p>Tap <b>&quot;Link with phone number instead&quot;</b></p>
               </div>
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">3</div>
-                <p>Tap <b>&quot;Link with phone number instead&quot;</b> at the bottom.</p>
-              </div>
-              <div className="flex items-start gap-3 text-sm">
-                <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">4</div>
-                <p>Enter the 8-digit code shown above.</p>
+                <p>Enter the code: <b>{pairCode}</b></p>
               </div>
             </div>
 
@@ -160,6 +163,10 @@ export function PairingSection() {
             >
               <RefreshCw className="w-4 h-4 mr-2" /> Try with another number
             </Button>
+            
+            <p className="text-[9px] text-center text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-1">
+              <ShieldCheck className="w-3 h-3" /> Secure End-to-End Handshake
+            </p>
           </div>
         )}
       </CardContent>

@@ -9,6 +9,8 @@ import os from 'os';
  * WhatsApp Pairing API Route
  * ලොග් වීමකින් තොරව Pairing Code එකක් ලබා ගැනීම සඳහා භාවිතා වේ.
  */
+export const maxDuration = 60; // Next.js 15 route timeout extension (60 seconds)
+
 export async function POST(req: Request) {
   let sessionPath = '';
   try {
@@ -29,8 +31,8 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // සෑම උත්සාහයකදීම අලුත් සෙෂන් එකක් සාදා ගැනීම (පෙර වැරදි මගහැරීමට)
-    const sessionId = `sithu_pair_${Date.now()}`;
+    // ස්ථාවර සෙෂන් එකක් භාවිතා කිරීම (සෑම විටම අලුත් එකක් නොවී දුරකථන අංකය මත පදනම්ව)
+    const sessionId = `sithu_session_${sanitizedNumber}`;
     sessionPath = path.join(os.tmpdir(), sessionId);
     
     if (!fs.existsSync(sessionPath)) {
@@ -45,13 +47,14 @@ export async function POST(req: Request) {
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }) as any,
-      browser: Browsers.ubuntu('Chrome'), // Ubuntu/Chrome ලෙස පෙන්වීම සාර්ථකත්වය වැඩිකරයි
+      browser: Browsers.macOS('Desktop'), // වඩාත් ස්ථාවර බ්‍රවුසර පරාමිතියක්
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 0,
+      keepAliveIntervalMs: 10000,
     });
 
-    // සර්වර් එක සමඟ සම්බන්ධ වීමට මඳ වේලාවක් ලබා දීම
-    await delay(6000); 
+    // කේතය ලබා ගැනීමට පෙර සර්වර් එක සමඟ සම්බන්ධ වීමට මඳ වේලාවක් ලබා දීම
+    await delay(5000); 
 
     if (!sock.authState.creds.registered) {
       try {
@@ -59,18 +62,23 @@ export async function POST(req: Request) {
         
         if (code) {
           const formattedCode = code.replace(/-/g, '').toUpperCase();
+          
+          // සර්වර් එකේ ක්‍රියාවලිය වහාම අවසන් නොකර මඳ වේලාවක් තබා ගැනීම (Login එක සම්පූර්ණ වීමට)
+          // සටහන: Serverless පරිසරයකදී මෙය සැමවිටම සාර්ථක නොවිය හැක.
+          sock.ev.on('creds.update', saveCreds);
+          
           return NextResponse.json({ 
             success: true, 
             code: formattedCode 
           });
         } else {
-          throw new Error("කේතය ලබා ගැනීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.");
+          throw new Error("කේතය ලබා ගැනීමට නොහැකි විය.");
         }
       } catch (err: any) {
-        console.error("Pairing request inner error:", err);
+        console.error("Pairing request error:", err);
         return NextResponse.json({ 
           success: false, 
-          error: "වට්සැප් සර්වර් සමඟ සම්බන්ධ වීමට නොහැකි විය. කරුණාකර ටික වේලාවකින් උත්සාහ කරන්න." 
+          error: "වට්සැප් සර්වර් සමඟ සම්බන්ධ වීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න." 
         }, { status: 500 });
       }
     } else {
