@@ -1,9 +1,8 @@
-
 import { NextResponse } from 'next/server';
 
 /**
  * DEPRECATED API ROUTE
- * Use the standalone 'bot.ts' script for better stability.
+ * Use the standalone 'bot.ts' script for better stability and macOS identity.
  */
 export async function POST() {
   return NextResponse.json({ 
