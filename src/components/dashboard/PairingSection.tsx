@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -24,6 +23,8 @@ export function PairingSection() {
     }
     
     setIsLoading(true);
+    setPairCode(null);
+
     try {
       const response = await fetch('/api/whatsapp/pair', {
         method: 'POST',
@@ -45,14 +46,15 @@ export function PairingSection() {
         toast({
           variant: "destructive",
           title: "Connection Failed",
-          description: data.error || "Could not retrieve pairing code.",
+          description: data.error || "Could not retrieve pairing code. Try a different number format.",
         });
       }
     } catch (error) {
+      console.error("Pairing fetch error:", error);
       toast({
         variant: "destructive",
         title: "System Error",
-        description: "An unexpected error occurred. Please try again later.",
+        description: "The connection timed out or the server is busy. Please try again.",
       });
     } finally {
       setIsLoading(false);

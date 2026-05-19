@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import makeWASocket, { useMultiFileAuthState, fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
 import pino from 'pino';
@@ -7,12 +6,11 @@ import path from 'path';
 
 /**
  * API Route to handle WhatsApp pairing requests.
- * Uses Baileys to initialize a temporary socket and request an 8-digit pairing code.
+ * Standard API routes provide better control over timeouts and session isolation.
  */
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const phoneNumber = body.phoneNumber;
+    const { phoneNumber } = await req.json();
     
     // Sanitize phone number (remove all non-digits)
     const sanitizedNumber = phoneNumber?.replace(/\D/g, '');
@@ -24,8 +22,9 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // Use a unique session directory for each pairing request to avoid "Connection Closed" conflicts
-    const sessionId = `session_${sanitizedNumber}_${Date.now()}`;
+    // Use a unique session directory to prevent "Connection Closed" conflicts
+    // In production, you might want to cleanup these folders periodically
+    const sessionId = `pairing_${sanitizedNumber}_${Date.now()}`;
     const sessionPath = path.join('/tmp', sessionId);
     
     if (!fs.existsSync(sessionPath)) {
@@ -33,34 +32,35 @@ export async function POST(req: Request) {
     }
 
     const { state } = await useMultiFileAuthState(sessionPath);
-    
-    // Get latest WA version to ensure compatibility
     const { version } = await fetchLatestBaileysVersion();
 
-    // Initialize the socket with minimal logging
+    // Initialize socket with minimal overhead
     const sock = makeWASocket({
       version,
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }) as any,
-      connectTimeoutMs: 20000,
-      defaultQueryTimeoutMs: 20000,
+      browser: ['SITHU-MD', 'Chrome', '1.1.0'],
+      connectTimeoutMs: 15000,
     });
 
-    // Request the pairing code
-    // This is the core Baileys call that generates the 8-digit string
+    // Request the pairing code from WhatsApp servers
     const rawCode = await sock.requestPairingCode(sanitizedNumber);
-    const code = rawCode.replace(/-/g, '').toUpperCase();
+    const formattedCode = rawCode.replace(/-/g, '').toUpperCase();
     
-    // In a production environment, the socket should stay open to complete the handshake.
-    // For this dashboard, we return the code to the user.
+    // Note: The socket can be closed after getting the code in this specific flow,
+    // though the session state remains in /tmp if the user finishes the link.
     
-    return NextResponse.json({ success: true, code });
+    return NextResponse.json({ 
+      success: true, 
+      code: formattedCode 
+    });
+
   } catch (error: any) {
-    console.error("WhatsApp Pairing API Error:", error);
+    console.error("WhatsApp API Error:", error);
     return NextResponse.json({ 
       success: false, 
-      error: error.message || "Failed to generate pairing code. Please check your network and try again." 
+      error: error.message || "Failed to generate pairing code. Please try again." 
     }, { status: 500 });
   }
 }
