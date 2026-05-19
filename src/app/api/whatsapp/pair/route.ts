@@ -6,17 +6,17 @@ import path from 'path';
 import os from 'os';
 
 /**
- * WhatsApp Pairing API Route - V7 (Max-Stability macOS Safari Identity)
- * macOS වලදී මෙන්ම කිසිදු බාධාවකින් තොරව සම්බන්ධ වීමට සහ Notification එක ගෙන්වා ගැනීමට මෙය සකස් කර ඇත.
+ * WhatsApp Pairing API Route - V8 (Ultimate Web-Standard Stability)
+ * macOS Safari Desktop Identity එක භාවිතා කරමින් web.whatsapp.com ආකාරයටම සම්බන්ධ වීමට සකස් කර ඇත.
  */
-export const maxDuration = 60; // Next.js max duration for serverless functions
+export const maxDuration = 60; 
 
 export async function POST(req: Request) {
   let sessionPath = '';
   try {
     const { phoneNumber } = await req.json();
     
-    // 1. දුරකථන අංකය පිරිසිදු කිරීම (Normalization)
+    // 1. දුරකථන අංකය පිරිසිදු කිරීම (Strict Normalization)
     let sanitizedNumber = phoneNumber?.replace(/\D/g, '');
     
     // ශ්‍රී ලංකාවේ අංකයක් නම් 94 ආකෘතියට හැරවීම
@@ -33,8 +33,8 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // 2. සෙෂන් එක සඳහා අද්විතීය තාවකාලික ෆෝල්ඩරයක් සෑදීම
-    const sessionId = `sithu_v7_${Date.now()}_${sanitizedNumber}`;
+    // 2. අලුත්ම සෙෂන් එකක් සඳහා තාවකාලික ෆෝල්ඩරයක් සෑදීම
+    const sessionId = `sithu_clean_${Date.now()}_${sanitizedNumber}`;
     sessionPath = path.join(os.tmpdir(), sessionId);
     
     if (!fs.existsSync(sessionPath)) {
@@ -51,30 +51,31 @@ export async function POST(req: Request) {
         version = latest.version;
       }
     } catch (e) {
-      console.log("Using default Baileys version");
+      console.log("Using default version");
     }
 
-    // 3. Socket එක ආරම්භ කිරීම (macOS Safari ලෙස පෙනී සිටීම - Notification එක ඒමට මෙය ඉතා වැදගත්)
+    // 3. Socket එක ආරම්භ කිරීම (macOS Safari 17.2.1 Identity)
+    // Notification එක ගෙන්වා ගැනීමට සහ 'Couldn't link' වැළැක්වීමට මෙය අත්‍යවශ්‍යයි.
     const sock = makeWASocket({
       version: version as any,
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }) as any,
-      // macOS Safari 17.2.1 ලෙස හඳුනා ගැනීමට (Crucial for bypassing 'Couldn't link device')
       browser: ['Mac OS', 'Safari', '17.2.1'], 
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 0,
-      keepAliveIntervalMs: 10000,
+      keepAliveIntervalMs: 15000,
       generateHighQualityLinkPreview: true,
       syncFullHistory: false,
+      markOnlineOnConnect: true,
     });
 
     // Creds update කිරීම
     sock.ev.on('creds.update', saveCreds);
 
     // 4. සර්වර් එක WhatsApp සමඟ ස්ථාවර සම්බන්ධතාවයක් ගොඩනගා ගන්නා තෙක් රැඳී සිටීම
-    // Notification එක ගෙන්වා ගැනීමට Socket එක Ready විය යුතුය.
-    await delay(10000); 
+    // Notification එක සක්‍රීය වීමට Socket එක 'Ready' විය යුතුය.
+    await delay(12000); 
 
     if (!sock.authState.creds.registered) {
       try {
@@ -86,16 +87,16 @@ export async function POST(req: Request) {
             success: true, 
             code: code.toUpperCase(),
             numberUsed: sanitizedNumber,
-            message: "කේතය සාර්ථකව ලැබුණි. කරුණාකර ඔබගේ දුරකථනයට පැමිණි Notification එක බලන්න."
+            message: "කේතය සාර්ථකව ලැබුණි. ඔබගේ දුරකථනයට ලැබුණු Notification එක ක්ලික් කරන්න."
           });
         } else {
-          throw new Error("WhatsApp returned empty code");
+          throw new Error("Empty code returned");
         }
       } catch (err: any) {
         console.error("Pairing request failed:", err);
         return NextResponse.json({ 
           success: false, 
-          error: "WhatsApp විසින් සම්බන්ධතාවය ප්‍රතික්ෂේප කරන ලදී. කරුණාකර අංකය සහ දුරකථනය පරීක්ෂා කරන්න." 
+          error: "WhatsApp විසින් සම්බන්ධතාවය ප්‍රතික්ෂේප කරන ලදී. අංකය සහ දුරකථනය පරීක්ෂා කර නැවත උත්සාහ කරන්න." 
         }, { status: 500 });
       }
     } else {
