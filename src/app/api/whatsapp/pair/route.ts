@@ -2,11 +2,12 @@
 import { NextResponse } from 'next/server';
 
 /**
- * WhatsApp Pairing API Route (Disabled in favor of standalone script)
+ * DEPRECATED API ROUTE
+ * Use the standalone 'bot.ts' script for better stability.
  */
 export async function POST() {
   return NextResponse.json({ 
     success: false, 
-    error: "කරුණාකර terminal එකේ 'npm run bot' විධානය භාවිතා කරන්න." 
-  }, { status: 403 });
+    error: "Please use 'npm run bot' in your terminal." 
+  }, { status: 410 });
 }

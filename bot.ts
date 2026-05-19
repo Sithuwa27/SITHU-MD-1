@@ -2,7 +2,7 @@
 import makeWASocket, { 
   useMultiFileAuthState, 
   fetchLatestBaileysVersion, 
-  Browsers,
+  DisconnectReason,
   delay
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
@@ -10,14 +10,14 @@ import fs from 'fs';
 import path from 'path';
 
 /**
- * Standalone WhatsApp Pairing Script
- * This script runs independently from the terminal to get the pairing code.
+ * Clean Standalone WhatsApp Pairing Script
+ * Use: npm run bot
  */
 async function startBot() {
-  const phoneNumber = "94781229710"; // Hardcoded as requested
-  const sessionPath = path.join(process.cwd(), 'session_data');
+  const phoneNumber = "94781229710"; // Hardcoded for testing
+  const sessionPath = path.join(process.cwd(), 'session_auth');
   
-  console.log(`\n[SITHU MD] Starting pairing process for: ${phoneNumber}`);
+  console.log(`\n[SITHU MD] Starting clean pairing process for: ${phoneNumber}`);
   
   if (!fs.existsSync(sessionPath)) {
     fs.mkdirSync(sessionPath, { recursive: true });
@@ -31,7 +31,8 @@ async function startBot() {
     auth: state,
     printQRInTerminal: false,
     logger: pino({ level: 'silent' }) as any,
-    browser: Browsers.macOS('Desktop'),
+    // Critical: Desktop identity to avoid "Couldn't link device" errors
+    browser: ['Ubuntu', 'Chrome', '20.0.04'],
     connectTimeoutMs: 60000,
     defaultQueryTimeoutMs: 0,
     keepAliveIntervalMs: 10000,
@@ -39,37 +40,40 @@ async function startBot() {
 
   sock.ev.on('creds.update', saveCreds);
 
-  // Connection monitoring
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect } = update;
     if (connection === 'open') {
-      console.log('\n[SUCCESS] SITHU MD is now connected to WhatsApp!');
+      console.log('\n[SUCCESS] SITHU MD connected successfully!');
     }
     if (connection === 'close') {
-      console.log('[INFO] Connection closed. Restarting might be needed if not linked.');
+      const shouldReconnect = (lastDisconnect?.error as any)?.output?.statusCode !== DisconnectReason.loggedOut;
+      console.log('[INFO] Connection closed. Reconnecting:', shouldReconnect);
+      if (shouldReconnect) startBot();
     }
   });
 
   try {
-    // Wait for the socket to initialize
-    console.log('[INFO] Initializing socket connection...');
-    await delay(10000); 
+    // Wait for the socket to stabilize before requesting the code
+    await delay(5000); 
     
-    // Request pairing code
-    console.log('[INFO] Requesting pairing code from WhatsApp servers...');
-    const code = await sock.requestPairingCode(phoneNumber);
-    
-    console.log("\n=========================================");
-    console.log("🚀 SITHU MD WHATSAPP PAIRING CODE");
-    console.log(`👉 CODE: ${code}`);
-    console.log("=========================================\n");
-    console.log("Enter this code on your phone (Linked Devices > Link with Phone Number)");
-    
-    // Keep the script running to allow the handshake to complete
-    // In a real bot, this would be your main loop.
+    if (!sock.authState.creds.registered) {
+      console.log('[INFO] Requesting 8-digit pairing code...');
+      const code = await sock.requestPairingCode(phoneNumber);
+      
+      console.log("\n=========================================");
+      console.log("🚀 SITHU MD WHATSAPP PAIRING CODE");
+      console.log(`👉 CODE: ${code}`);
+      console.log("=========================================\n");
+      console.log("Steps to link:");
+      console.log("1. Open WhatsApp on your phone.");
+      console.log("2. Go to Linked Devices > Link a Device.");
+      console.log("3. Select 'Link with phone number instead'.");
+      console.log("4. Enter the code shown above.");
+    } else {
+      console.log('[INFO] Bot is already registered/linked.');
+    }
   } catch (error: any) {
-    console.error("\n[ERROR] Failed to get pairing code:", error.message);
-    process.exit(1);
+    console.error("\n[ERROR] Failed to obtain pairing code:", error.message);
   }
 }
 
