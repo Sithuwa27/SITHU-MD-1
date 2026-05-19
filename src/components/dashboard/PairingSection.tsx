@@ -4,19 +4,29 @@
 import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { QrCode, Loader2, AlertCircle, RefreshCw, CheckCircle2, ShieldCheck, Smartphone, Info } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Smartphone, Loader2, AlertCircle, RefreshCw, CheckCircle2, Copy, ShieldCheck, KeyRound } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import Image from "next/image";
 
 export function PairingSection() {
-  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const generateQR = async () => {
+  const requestPairingCode = async () => {
+    if (!phoneNumber || phoneNumber.length < 10) {
+      toast({
+        variant: "destructive",
+        title: "අසම්පූර්ණ අංකයකි",
+        description: "කරුණාකර නිවැරදි දුරකථන අංකය ඇතුළත් කරන්න (උදා: 947...)",
+      });
+      return;
+    }
+
     setIsLoading(true);
-    setQrCode(null);
+    setPairingCode(null);
     setServerError(null);
 
     try {
@@ -25,19 +35,19 @@ export function PairingSection() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ phoneNumber }),
       });
       
       const data = await response.json();
       
-      if (data.success && data.qr) {
-        setQrCode(data.qr);
+      if (data.success && data.code) {
+        setPairingCode(data.code);
         toast({
-          title: "QR Code එක සූදානම්!",
-          description: "දැන් ඔබගේ දුරකථනයෙන් මෙය ස්කෑන් කරන්න.",
+          title: "Pairing Code එක සූදානම්!",
+          description: "දැන් ඔබගේ දුරකථනයේ මෙම කේතය ඇතුළත් කරන්න.",
         });
       } else {
-        setServerError(data.error || "QR කේතය ලබාගත නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.");
+        setServerError(data.error || "කේතය ලබාගත නොහැකි විය. ඔබගේ අංකය සහ WhatsApp සක්‍රීය දැයි බලන්න.");
       }
     } catch (error) {
       setServerError("සර්වර් එක සම්බන්ධ කර ගැනීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.");
@@ -46,16 +56,26 @@ export function PairingSection() {
     }
   };
 
+  const copyCode = () => {
+    if (pairingCode) {
+      navigator.clipboard.writeText(pairingCode);
+      toast({
+        title: "Copied!",
+        description: "Pairing code copied to clipboard.",
+      });
+    }
+  };
+
   return (
     <Card className="glass-morphism h-full">
       <CardHeader>
         <div className="flex items-center gap-2 text-primary mb-2">
-          <QrCode className="w-5 h-5" />
+          <KeyRound className="w-5 h-5" />
           <span className="text-sm font-medium uppercase tracking-widest">Connect SITHU MD</span>
         </div>
-        <CardTitle className="text-2xl font-headline font-bold">WhatsApp QR Link</CardTitle>
+        <CardTitle className="text-2xl font-headline font-bold">WhatsApp Pairing</CardTitle>
         <CardDescription>
-          QR කේතය ස්කෑන් කර වඩාත් ආරක්ෂිතව සම්බන්ධ වන්න.
+          අංකය ඇතුළත් කර pairing code එක ලබා ගන්න.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -67,19 +87,27 @@ export function PairingSection() {
           </Alert>
         )}
 
-        {!qrCode ? (
-          <div className="space-y-6">
-            <div className="flex flex-col items-center justify-center p-8 bg-black/20 rounded-2xl border border-dashed border-white/10 gap-4">
-              <div className="w-32 h-32 flex items-center justify-center bg-white/5 rounded-xl">
-                <QrCode className="w-16 h-16 text-muted-foreground opacity-20" />
+        {!pairingCode ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Phone Number (with Country Code)</label>
+              <div className="relative">
+                <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
+                <Input 
+                  placeholder="e.g. 94712345678" 
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="pl-10 bg-background/50 border-white/10 h-12 text-lg font-mono tracking-wider"
+                  disabled={isLoading}
+                />
               </div>
-              <p className="text-xs text-center text-muted-foreground max-w-[200px]">සම්බන්ධ වීමට අවශ්‍ය QR කේතය උත්පාදනය කිරීමට පහත බොත්තම ඔබන්න.</p>
+              <p className="text-[10px] text-muted-foreground italic">අංකයට පෙර + ලකුණ යෙදීම අවශ්‍ය නොවේ.</p>
             </div>
 
             <Button 
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 shadow-lg shadow-primary/20 transition-all active:scale-95 disabled:opacity-70"
-              onClick={generateQR}
-              disabled={isLoading}
+              onClick={requestPairingCode}
+              disabled={isLoading || !phoneNumber}
             >
               {isLoading ? (
                 <>
@@ -89,7 +117,7 @@ export function PairingSection() {
               ) : (
                 <>
                   <RefreshCw className="w-4 h-4 mr-2" />
-                  Generate QR Code
+                  Get Pairing Code
                 </>
               )}
             </Button>
@@ -99,43 +127,45 @@ export function PairingSection() {
                 <CheckCircle2 className="w-3 h-3" /> සම්බන්ධ වීමට පියවර:
               </h5>
               <div className="text-[10px] text-muted-foreground leading-relaxed space-y-2">
-                <p>1. "Generate QR Code" බොත්තම ඔබා QR කේතය ලබා ගන්න.</p>
-                <p>2. ඔබගේ දුරකථනයේ <b>WhatsApp</b> විවෘත කරන්න.</p>
-                <p>3. <b>Settings &gt; Linked Devices &gt; Link a Device</b> වෙත යන්න.</p>
-                <p>4. ඔබගේ දුරකථනය මෙහි ඇති QR කේතය වෙත යොමු කරන්න.</p>
+                <p>1. ඔබගේ WhatsApp අංකය ඇතුළත් කර "Get Pairing Code" ඔබන්න.</p>
+                <p>2. දුරකථනයට Notification එකක් ආවහොත් එය ක්ලික් කරන්න.</p>
+                <p>3. නැතහොත් <b>Linked Devices &gt; Link with phone number</b> වෙත යන්න.</p>
+                <p>4. මෙහි ලැබෙන අංක 8 ක කේතය එහි ඇතුළත් කරන්න.</p>
               </div>
             </div>
           </div>
         ) : (
           <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="flex flex-col items-center justify-center p-6 bg-white rounded-2xl border-4 border-primary/20 shadow-2xl">
-              <div className="relative w-64 h-64 bg-white p-2">
-                <img 
-                  src={qrCode} 
-                  alt="WhatsApp QR Code" 
-                  className="w-full h-full object-contain"
-                />
-                {isLoading && (
-                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                  </div>
-                )}
+            <div className="flex flex-col items-center justify-center p-8 bg-black/20 rounded-2xl border-2 border-primary/20 shadow-2xl group">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-[0.3em] mb-4 font-bold">Your Pairing Code</p>
+              <div 
+                className="text-4xl md:text-5xl font-mono font-black tracking-[0.2em] text-primary cursor-pointer hover:scale-105 transition-transform"
+                onClick={copyCode}
+              >
+                {pairingCode}
               </div>
-              <p className="mt-4 text-[10px] text-black font-bold uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full">Scan this code</p>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="mt-4 text-muted-foreground hover:text-primary gap-2"
+                onClick={copyCode}
+              >
+                <Copy className="w-3 h-3" /> Copy Code
+              </Button>
             </div>
             
-            <div className="p-4 bg-accent/5 border border-accent/20 rounded-xl flex items-start gap-3">
-              <Smartphone className="w-5 h-5 text-accent shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-xs font-bold text-accent uppercase tracking-wider">දුරකථනයෙන් ස්කෑන් කරන්න</p>
-                <p className="text-[10px] text-muted-foreground leading-tight">ඔබගේ දුරකථනය මෙම කේතය වෙත යොමු කරන්න. සාර්ථකව සම්බන්ධ වූ පසු මෙම පිටුව යාවත්කාලීන වනු ඇත.</p>
-              </div>
-            </div>
+            <Alert className="bg-accent/5 border-accent/20">
+              <Smartphone className="w-4 h-4 text-accent" />
+              <AlertTitle className="text-accent text-xs font-bold">දුරකථනය පරීක්ෂා කරන්න</AlertTitle>
+              <AlertDescription className="text-[10px] text-muted-foreground">
+                ඔබගේ දුරකථනයට <b>"Are you trying to link a device?"</b> ලෙස notification එකක් ලැබී තිබේ නම් එය ක්ලික් කර ඉහත කේතය ඇතුළත් කරන්න.
+              </AlertDescription>
+            </Alert>
 
             <Button 
               variant="outline" 
               className="w-full border-white/10 hover:bg-white/5 font-bold"
-              onClick={generateQR}
+              onClick={requestPairingCode}
               disabled={isLoading}
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} /> 
@@ -143,7 +173,7 @@ export function PairingSection() {
             </Button>
             
             <p className="text-[9px] text-center text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-1">
-              <ShieldCheck className="w-3 h-3 text-primary" /> End-to-End Encrypted Connection
+              <ShieldCheck className="w-3 h-3 text-primary" /> End-to-End Encrypted Standalone Bot
             </p>
           </div>
         )}

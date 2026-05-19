@@ -1,103 +1,67 @@
 
 import { NextResponse } from 'next/server';
-import makeWASocket, { useMultiFileAuthState, fetchLatestBaileysVersion, delay, Browsers } from '@whiskeysockets/baileys';
-import pino from 'pino';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
-import QRCode from 'qrcode';
+import { exec } from 'child_process';
+import util from 'util';
+
+const execPromise = util.promisify(exec);
 
 /**
- * WhatsApp QR Connection API Route
- * Generates a QR code for the user to scan, similar to WhatsApp Web.
+ * WhatsApp Pairing API Route
+ * This route triggers the standalone bot.ts script to get a pairing code.
  */
 export const maxDuration = 60; 
 
 export async function POST(req: Request) {
-  let sessionPath = '';
   try {
-    // 1. සෙෂන් එක සඳහා තාවකාලික ෆෝල්ඩරයක් සෑදීම
-    const sessionId = `sithu_qr_${Date.now()}`;
-    sessionPath = path.join(os.tmpdir(), sessionId);
-    
-    if (!fs.existsSync(sessionPath)) {
-      fs.mkdirSync(sessionPath, { recursive: true });
+    const { phoneNumber } = await req.json();
+
+    if (!phoneNumber) {
+      return NextResponse.json({ success: false, error: "Phone number is required" }, { status: 400 });
     }
 
-    const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+    // Sanitize phone number: remove +, spaces, leading zeros
+    const cleanPhone = phoneNumber.replace(/\D/g, '').replace(/^0+/, '');
     
-    let version: [number, number, number] = [2, 3000, 1015901307];
-    try {
-      const latest = await fetchLatestBaileysVersion();
-      if (latest && latest.version) {
-        version = latest.version;
-      }
-    } catch (e) {
-      console.log("Using default version");
+    // We execute the standalone script to get the code
+    // This is more stable than running the socket logic inside the request handler
+    const { stdout, stderr } = await execPromise(`npx tsx bot.ts --phone=${cleanPhone}`);
+
+    if (stderr && !stdout) {
+      console.error("Bot script error:", stderr);
+      return NextResponse.json({ success: false, error: "සම්බන්ධතාවය ස්ථාපිත කිරීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න." }, { status: 500 });
     }
 
-    // 2. Socket එක ආරම්භ කිරීම
-    // macOS Desktop ලෙස පෙනී සිටීම "Couldn't log in" දෝෂය මගහැරවීමට උදව් වේ.
-    const sock = makeWASocket({
-      version: version as any,
-      auth: state,
-      printQRInTerminal: false,
-      logger: pino({ level: 'silent' }) as any,
-      browser: Browsers.macOS('Desktop'), 
-      connectTimeoutMs: 60000,
-      defaultQueryTimeoutMs: undefined,
-      keepAliveIntervalMs: 10000,
-    });
-
-    sock.ev.on('creds.update', saveCreds);
-
-    // 3. QR කේතය ලැබෙන තෙක් රැඳී සිටීම
-    const qrPromise = new Promise<string>((resolve, reject) => {
-      sock.ev.on('connection.update', (update) => {
-        const { qr, connection, lastDisconnect } = update;
-        
-        if (qr) {
-          resolve(qr);
-        }
-
-        if (connection === 'close') {
-          const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
-          if (statusCode !== 401) {
-             reject(new Error(`සම්බන්ධතාවය බිඳ වැටුණි (Status: ${statusCode})`));
-          }
-        }
-        
-        if (connection === 'open') {
-          reject(new Error('Already connected'));
-        }
-      });
-
-      // Timeout after 30 seconds
-      setTimeout(() => reject(new Error('QR Timeout')), 30000);
-    });
-
-    try {
-      const qrString = await qrPromise;
-      const qrDataUri = await QRCode.toDataURL(qrString);
-      
+    // Try to find the JSON output in stdout
+    const jsonMatch = stdout.match(/\{"success":true,"code":"[A-Z0-9]+"\}/);
+    if (jsonMatch) {
+      const result = JSON.parse(jsonMatch[0]);
       return NextResponse.json({ 
         success: true, 
-        qr: qrDataUri,
-        message: "QR කේතය සාර්ථකව ලැබුණි. කරුණාකර එය ස්කෑන් කරන්න."
+        code: result.code,
+        message: "Pairing code එක සාර්ථකව ලැබුණි."
       });
-    } catch (err: any) {
-      console.error("QR Generation failed:", err);
-      return NextResponse.json({ 
-        success: false, 
-        error: err.message === 'QR Timeout' ? "QR කේතය ලබා ගැනීමට ප්‍රමාද වැඩියි. නැවත උත්සාහ කරන්න." : err.message || "සම්බන්ධතාවය ස්ථාපිත කිරීමට නොහැකි විය." 
-      }, { status: 500 });
+    }
+
+    // If no JSON found but there was output, try to parse the last line
+    try {
+      const lines = stdout.trim().split('\n');
+      const lastLine = lines[lines.length - 1];
+      const result = JSON.parse(lastLine);
+      if (result.success) {
+        return NextResponse.json({ success: true, code: result.code });
+      } else {
+        return NextResponse.json({ success: false, error: result.error || "දෝෂයකි" }, { status: 500 });
+      }
+    } catch (e) {
+      console.error("Execution failed:", stdout);
+      return NextResponse.json({ success: false, error: "කේතය ලබා ගැනීමට නොහැකි විය. දුරකථන අංකය නිවැරදි දැයි බලන්න." }, { status: 500 });
     }
 
   } catch (error: any) {
     console.error("Critical API Error:", error);
     return NextResponse.json({ 
       success: false, 
-      error: "සම්බන්ධතාවය ස්ථාපිත කිරීමට නොහැකි විය. නැවත උත්සාහ කරන්න." 
+      error: "සම්බන්ධතාවය ස්ථාපිත කිරීමට නොහැකි විය. (Timeout/Error)" 
     }, { status: 500 });
   }
 }
