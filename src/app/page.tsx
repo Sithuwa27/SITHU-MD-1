@@ -6,8 +6,11 @@ import { MediaDownloader } from "@/components/dashboard/MediaDownloader";
 import { SessionSettings } from "@/components/dashboard/SessionSettings";
 import { Toaster } from "@/components/ui/toaster";
 import { Waves, Zap, Bot, Music } from "lucide-react";
+import { getBotStatus } from "@/app/actions/bot-status";
 
-export default function Home() {
+export default async function Home() {
+  const status = await getBotStatus();
+
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
       {/* Navigation */}
@@ -34,7 +37,7 @@ export default function Home() {
 
           <div className="flex items-center gap-4">
             <div className="flex -space-x-2">
-              <div className="w-8 h-8 rounded-full border-2 border-background bg-accent status-pulse" />
+              <div className={`w-8 h-8 rounded-full border-2 border-background ${status.isConnected ? 'bg-accent status-pulse' : 'bg-destructive'}`} />
               <div className="w-8 h-8 rounded-full border-2 border-background bg-secondary flex items-center justify-center text-[10px] font-bold">
                 +12
               </div>
@@ -45,8 +48,8 @@ export default function Home() {
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         <header className="mb-8 space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs font-bold text-primary uppercase tracking-widest animate-pulse">
-            <Zap className="w-3 h-3" /> System Operational
+          <div className={`inline-flex items-center gap-2 px-3 py-1 border rounded-full text-xs font-bold uppercase tracking-widest ${status.isConnected ? 'bg-primary/10 border-primary/20 text-primary animate-pulse' : 'bg-destructive/10 border-destructive/20 text-destructive'}`}>
+            <Zap className="w-3 h-3" /> {status.isConnected ? 'System Operational' : 'System Offline'}
           </div>
           <h2 className="text-4xl font-headline font-bold">Welcome back, <span className="text-gradient">Commander</span></h2>
           <p className="text-muted-foreground max-w-2xl">Manage your AI-powered WhatsApp music bot. Link your device, search for tracks via lyrics, and monitor real-time activity.</p>
@@ -57,7 +60,10 @@ export default function Home() {
           {/* Main Content Column */}
           <div className="lg:col-span-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <StatusCard botName="SITHU-MD-BOT-V2" isConnected={true} />
+              <StatusCard 
+                botName={status.isConnected ? status.botName : "SITHU-MD-OFFLINE"} 
+                isConnected={status.isConnected} 
+              />
               <div className="p-6 glass-morphism rounded-xl relative overflow-hidden group">
                 <Music className="absolute -right-4 -bottom-4 w-32 h-32 text-primary/10 group-hover:text-primary/20 transition-all rotate-12" />
                 <h3 className="text-lg font-bold mb-2">Network Energy</h3>
@@ -65,12 +71,12 @@ export default function Home() {
                   {[40, 70, 45, 90, 65, 30, 80, 55, 95, 40].map((h, i) => (
                     <div 
                       key={i} 
-                      className="flex-1 bg-accent/40 rounded-t-sm animate-in slide-in-from-bottom duration-500" 
+                      className={`flex-1 rounded-t-sm animate-in slide-in-from-bottom duration-500 ${status.isConnected ? 'bg-accent/40' : 'bg-muted/40'}`} 
                       style={{ height: `${h}%`, transitionDelay: `${i * 50}ms` }} 
                     />
                   ))}
                 </div>
-                <p className="mt-4 text-xs text-muted-foreground">Streaming data throughput is optimal. 4.2GB processed today.</p>
+                <p className="mt-4 text-xs text-muted-foreground">Streaming data throughput is {status.isConnected ? 'optimal' : 'unavailable'}.</p>
               </div>
             </div>
 
@@ -81,9 +87,9 @@ export default function Home() {
 
           {/* Sidebar Column */}
           <div className="lg:col-span-4 space-y-6">
-            <PairingSection />
+            <PairingSection isConnected={status.isConnected} phoneNumber={status.phoneNumber} pushName={status.pushName} />
             <CommandGenerator />
-            <SessionSettings />
+            <SessionSettings isConnected={status.isConnected} />
           </div>
         </div>
       </main>

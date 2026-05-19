@@ -11,24 +11,24 @@ interface StatusCardProps {
 
 export function StatusCard({ isConnected, botName }: StatusCardProps) {
   return (
-    <Card className="p-6 glass-morphism overflow-hidden relative">
+    <Card className={`p-6 glass-morphism overflow-hidden relative border-t-4 ${isConnected ? 'border-t-accent' : 'border-t-destructive'}`}>
       <div className="absolute top-0 right-0 p-4">
         <div className={`h-3 w-3 rounded-full ${isConnected ? "bg-accent status-pulse" : "bg-destructive"}`} />
       </div>
       
       <div className="flex items-start gap-4">
-        <div className={`p-3 rounded-xl ${isConnected ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
+        <div className={`p-3 rounded-xl ${isConnected ? "bg-accent/20 text-accent" : "bg-muted text-muted-foreground"}`}>
           {isConnected ? <Wifi className="w-6 h-6" /> : <WifiOff className="w-6 h-6" />}
         </div>
         
         <div className="space-y-1">
           <h3 className="text-xl font-headline font-bold">{botName}</h3>
           <div className="flex items-center gap-2">
-            <Badge variant={isConnected ? "default" : "secondary"} className={isConnected ? "bg-accent hover:bg-accent" : ""}>
+            <Badge variant={isConnected ? "default" : "secondary"} className={isConnected ? "bg-accent hover:bg-accent text-accent-foreground" : ""}>
               {isConnected ? "Active" : "Disconnected"}
             </Badge>
             <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Clock className="w-3 h-3" /> Uptime: 24h 12m
+              <Clock className="w-3 h-3" /> {isConnected ? 'Uptime: 24h 12m' : 'Last seen: Today'}
             </span>
           </div>
         </div>
@@ -37,11 +37,15 @@ export function StatusCard({ isConnected, botName }: StatusCardProps) {
       <div className="mt-6 grid grid-cols-2 gap-4">
         <div className="p-3 bg-white/5 rounded-lg border border-white/5">
           <p className="text-xs text-muted-foreground uppercase tracking-wider">Response Time</p>
-          <p className="text-lg font-mono font-bold text-accent">140ms</p>
+          <p className={`text-lg font-mono font-bold ${isConnected ? 'text-accent' : 'text-muted-foreground'}`}>
+            {isConnected ? '140ms' : '---'}
+          </p>
         </div>
         <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">Commands Processed</p>
-          <p className="text-lg font-mono font-bold text-primary">1,204</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Status</p>
+          <p className={`text-lg font-mono font-bold ${isConnected ? 'text-primary' : 'text-destructive'}`}>
+            {isConnected ? 'ONLINE' : 'OFFLINE'}
+          </p>
         </div>
       </div>
     </Card>
