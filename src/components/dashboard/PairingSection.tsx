@@ -102,7 +102,7 @@ export function PairingSection() {
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Requesting...
+                  සම්බන්ධ වෙමින්... (Connecting)
                 </>
               ) : (
                 <>
@@ -117,9 +117,10 @@ export function PairingSection() {
                 <Smartphone className="w-3 h-3" /> උපදෙස් (Instructions)
               </h5>
               <div className="text-[10px] text-muted-foreground leading-relaxed space-y-1">
-                <p>1. දුරකථනයට පණිවිඩයක් (Notification) ලැබෙන්නේ නැත.</p>
-                <p>2. කේතය ලැබුණු පසු <b>Settings &gt; Linked Devices &gt; Link with phone number</b> වෙත යන්න.</p>
-                <p>3. එහිදී <b>{phoneNumber || 'ඔබ ඇතුළත් කළ අංකය'}</b> ම පාවිච්චි කිරීමට වගබලා ගන්න.</p>
+                <p>1. මෙහි ලැබෙන අංක 8 කේතය (Code) සටහන් කර ගන්න.</p>
+                <p>2. දුරකථනයේ <b>Settings &gt; Linked Devices &gt; Link a Device</b> වෙත යන්න.</p>
+                <p>3. එහිදී <b>"Link with phone number instead"</b> තෝරාගන්න.</p>
+                <p>4. මෙහි ලැබෙන කේතය එහි ඇතුළත් කරන්න.</p>
               </div>
             </div>
           </div>
@@ -139,7 +140,7 @@ export function PairingSection() {
             
             <div className="p-3 bg-accent/5 border border-accent/20 rounded-lg flex items-center gap-3 animate-pulse">
               <Loader2 className="w-4 h-4 text-accent animate-spin" />
-              <p className="text-[11px] font-bold text-accent uppercase tracking-wider">සම්බන්ධතාවය බලාපොරොත්තුවෙන්... (Waiting)</p>
+              <p className="text-[11px] font-bold text-accent uppercase tracking-wider">කරුණාකර දැන් කේතය දුරකථනයට ඇතුළත් කරන්න...</p>
             </div>
 
             <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
@@ -165,7 +166,7 @@ export function PairingSection() {
                 setServerError(null);
               }}
             >
-              <RefreshCw className="w-4 h-4 mr-2" /> Try again
+              <RefreshCw className="w-4 h-4 mr-2" /> නැවත උත්සාහ කරන්න
             </Button>
             
             <p className="text-[9px] text-center text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-1">

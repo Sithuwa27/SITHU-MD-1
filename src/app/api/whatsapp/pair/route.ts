@@ -7,23 +7,24 @@ import os from 'os';
 
 /**
  * WhatsApp Pairing API Route
+ * This route initializes a Baileys socket and requests a pairing code.
  */
-export const maxDuration = 60; 
+export const maxDuration = 60; // Maximize duration for long-running socket connection
 
 export async function POST(req: Request) {
   let sessionPath = '';
   try {
     const { phoneNumber } = await req.json();
     
-    // 1. අංකය පිරිසිදු කිරීම (ඉලක්කම් පමණක් තබා ගැනීම)
+    // 1. Clean the phone number
     let sanitizedNumber = phoneNumber?.replace(/\D/g, '');
     
-    // 2. ශ්‍රී ලංකාවේ අංකයක් නම් (07... ලෙස ඇරඹේ නම්) එය 94... බවට පත් කිරීම
+    // 2. Handle Sri Lankan numbers starting with 0
     if (sanitizedNumber.startsWith('0') && sanitizedNumber.length === 10) {
       sanitizedNumber = '94' + sanitizedNumber.substring(1);
     }
     
-    // 3. අංකයේ දිග පරීක්ෂාව (අවම වශයෙන් ඉලක්කම් 10ක්වත් තිබිය යුතුය)
+    // 3. Validation
     if (!sanitizedNumber || sanitizedNumber.length < 10) {
       return NextResponse.json({ 
         success: false, 
@@ -31,11 +32,12 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // 4. සෙෂන් එක කළමනාකරණය
+    // 4. Session management
+    // We use a specific folder for each number to avoid multi-session conflicts
     const sessionId = `sithu_session_${sanitizedNumber}`;
     sessionPath = path.join(os.tmpdir(), sessionId);
     
-    // පැරණි සෙෂන් දත්ත තිබේ නම් ඒවා ඉවත් කිරීම (අලුතින්ම කනෙක්ට් වීමට)
+    // Clear old session if it exists to ensure a fresh pairing attempt
     if (fs.existsSync(sessionPath)) {
       try {
         fs.rmSync(sessionPath, { recursive: true, force: true });
@@ -54,24 +56,24 @@ export async function POST(req: Request) {
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }) as any,
-      browser: Browsers.macOS('Chrome'), // Chrome ලෙස පෙන්වීම වඩාත් සාර්ථක විය හැක
+      browser: Browsers.ubuntu('Chrome'), // Ubuntu Chrome matches better for many servers
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 0,
       keepAliveIntervalMs: 15000,
     });
 
-    // සර්වර් එකට සම්බන්ධ වීමට මඳ වේලාවක් ලබා දීම
-    await delay(7000); 
+    // Wait a bit for the socket to connect to the WhatsApp servers
+    await delay(8000); 
 
     if (!sock.authState.creds.registered) {
       try {
-        // Pairing code ඉල්ලීම
+        // Request the pairing code
         const code = await sock.requestPairingCode(sanitizedNumber);
         
         if (code) {
           const formattedCode = code.replace(/-/g, '').toUpperCase();
           
-          // Creds update කරන්න listener එක දානවා (මෙය පසුබිමේ සිදුවේ)
+          // Background listener for creds update
           sock.ev.on('creds.update', saveCreds);
           
           return NextResponse.json({ 
@@ -80,7 +82,7 @@ export async function POST(req: Request) {
             numberUsed: sanitizedNumber
           });
         } else {
-          throw new Error("කේතය ජනනය කිරීමට නොහැකි විය.");
+          throw new Error("Could not generate pairing code.");
         }
       } catch (err: any) {
         console.error("Pairing request error:", err);
@@ -92,7 +94,7 @@ export async function POST(req: Request) {
     } else {
       return NextResponse.json({ 
         success: false, 
-        error: "මෙම අංකය දැනටමත් සම්බන්ධ වී ඇත." 
+        error: "මෙම අංකය දැනටමත් සම්බන්ධ වී ඇත (Already Connected)." 
       }, { status: 400 });
     }
 
