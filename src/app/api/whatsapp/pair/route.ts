@@ -6,8 +6,8 @@ import path from 'path';
 import os from 'os';
 
 /**
- * WhatsApp Pairing API Route - V10 (Notification Priority)
- * macOS Safari Identity එක භාවිතා කරමින් දුරකථනයට Notification එකක් ලැබීමට ප්‍රමුඛතාවය ලබා දී ඇත.
+ * WhatsApp Pairing API Route - V11 (Notification Focus)
+ * macOS Chrome Identity භාවිතා කරමින් දුරකථනයට Notification එකක් ලැබීමට ඇති ඉඩකඩ උපරිම කර ඇත.
  */
 export const maxDuration = 60; 
 
@@ -33,8 +33,8 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // 2. අලුත්ම සෙෂන් එකක් සඳහා තාවකාලික ෆෝල්ඩරයක් සෑදීම
-    const sessionId = `sithu_v10_${Date.now()}`;
+    // 2. සෙෂන් එක සඳහා තාවකාලික ෆෝල්ඩරයක් සෑදීම
+    const sessionId = `sithu_v11_${Date.now()}`;
     sessionPath = path.join(os.tmpdir(), sessionId);
     
     if (!fs.existsSync(sessionPath)) {
@@ -54,27 +54,26 @@ export async function POST(req: Request) {
       console.log("Using default version");
     }
 
-    // 3. Socket එක ආරම්භ කිරීම (macOS Safari Identity)
-    // Notification එක ගෙන්වා ගැනීමට Browsers.macOS('Safari') වඩාත් සුදුසුයි.
+    // 3. Socket එක ආරම්භ කිරීම (macOS Chrome Identity for Notification Trigger)
     const sock = makeWASocket({
       version: version as any,
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }) as any,
-      browser: Browsers.macOS('Safari'), 
+      browser: Browsers.macOS('Chrome'), 
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 0,
       keepAliveIntervalMs: 30000,
-      generateHighQualityLinkPreview: true,
-      syncFullHistory: false,
       markOnlineOnConnect: true,
+      syncFullHistory: false,
+      generateHighQualityLinkPreview: true,
     });
 
     // Creds update කිරීම
     sock.ev.on('creds.update', saveCreds);
 
-    // 4. සර්වර් එක WhatsApp සමඟ ස්ථාවර සම්බන්ධතාවයක් ගොඩනගා ගන්නා තෙක් රැඳී සිටීම
-    // Notification එකක් trigger වීමට Socket එක 'Online' විය යුතුය.
+    // 4. සර්වර් එක WhatsApp සමඟ ස්ථාවර වන තෙක් තත්පර 15 ක් රැඳී සිටීම
+    // මෙය දුරකථනයට Notification එකක් ලැබීමට ඇති ඉඩකඩ වැඩි කරයි.
     await delay(15000); 
 
     if (!sock.authState.creds.registered) {
@@ -96,7 +95,7 @@ export async function POST(req: Request) {
         console.error("Pairing request failed:", err);
         return NextResponse.json({ 
           success: false, 
-          error: "WhatsApp විසින් සම්බන්ධතාවය ප්‍රතික්ෂේප කරන ලදී. අංකය සහ දුරකථනය පරීක්ෂා කර නැවත උත්සාහ කරන්න." 
+          error: "WhatsApp විසින් සම්බන්ධතාවය ප්‍රතික්ෂේප කරන ලදී. අංකය පරීක්ෂා කරන්න." 
         }, { status: 500 });
       }
     } else {
@@ -110,7 +109,7 @@ export async function POST(req: Request) {
     console.error("Critical API Error:", error);
     return NextResponse.json({ 
       success: false, 
-      error: "සම්බන්ධතාවය ස්ථාපිත කිරීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න." 
+      error: "සම්බන්ධතාවය ස්ථාපිත කිරීමට නොහැකි විය. නැවත උත්සාහ කරන්න." 
     }, { status: 500 });
   }
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Smartphone as Mobile, KeyRound, AlertCircle, Loader2, Info, RefreshCw, ShieldCheck, CheckCircle2, QrCode, Bell } from "lucide-react";
+import { Smartphone as Mobile, KeyRound, AlertCircle, Loader2, Info, RefreshCw, ShieldCheck, CheckCircle2, QrCode, Bell, Smartphone } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -46,7 +46,7 @@ export function PairingSection() {
         setUsedNumber(data.numberUsed);
         toast({
           title: "Pairing Code එක ලැබුණා!",
-          description: "දැන් ඉක්මනින් ඔබගේ දුරකථනයට ඇතුළත් කරන්න.",
+          description: "දැන් ඉක්මනින් ඔබගේ දුරකථනයට ලැබුණු Notification එක බලන්න.",
         });
       } else {
         setServerError(data.error || "කේතය ලබාගත නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.");
@@ -67,7 +67,7 @@ export function PairingSection() {
         </div>
         <CardTitle className="text-2xl font-headline font-bold">WhatsApp Web Pairing</CardTitle>
         <CardDescription>
-          web.whatsapp.com තාක්ෂණය ඔස්සේ ආරක්ෂිතව සම්බන්ධ වන්න.
+          Notification එකක් හරහා වඩාත් පහසුවෙන් සම්බන්ධ වන්න.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -118,8 +118,8 @@ export function PairingSection() {
               </h5>
               <div className="text-[10px] text-muted-foreground leading-relaxed space-y-2">
                 <p>1. දුරකථන අංකය නිවැරදිව ඇතුළත් කර "Get Pairing Code" ක්ලික් කරන්න.</p>
-                <p>2. දුරකථනයට <b>"Are you trying to link a device?"</b> ලෙස ලැබෙන Notification එක ක්ලික් කරන්න.</p>
-                <p>3. Notification එක ලැබුණේ නැතිනම්: <b>WhatsApp &gt; Settings &gt; Linked Devices &gt; Link a Device &gt; Link with phone number instead</b> වෙත යන්න.</p>
+                <p>2. තත්පර 15ක් පමණ රැඳී සිටින විට ඔබගේ දුරකථනයට <b>"Are you trying to link a device?"</b> ලෙස Notification එකක් ලැබෙනු ඇත.</p>
+                <p>3. එය ක්ලික් කර මෙහි පෙන්වන අංක 8 කේතය ඇතුළත් කරන්න.</p>
               </div>
             </div>
           </div>
@@ -137,19 +137,18 @@ export function PairingSection() {
               <p className="text-[10px] text-accent font-bold">Linked to: +{usedNumber}</p>
             </div>
             
-            <div className="p-3 bg-accent/5 border border-accent/20 rounded-lg flex items-center gap-3 animate-pulse">
-              <Bell className="w-4 h-4 text-accent" />
-              <p className="text-[11px] font-bold text-accent uppercase tracking-wider">දැන් දුරකථනයට පැමිණි Notification එක බලන්න...</p>
+            <div className="p-4 bg-accent/5 border border-accent/20 rounded-xl flex items-start gap-3 animate-pulse">
+              <Bell className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-accent uppercase tracking-wider">දැන් ඔබගේ දුරකථනය බලන්න!</p>
+                <p className="text-[10px] text-muted-foreground leading-tight">දුරකථනයට පැමිණ ඇති <b>"Are you trying to link a device?"</b> Notification එක ක්ලික් කර ඉහත කේතය ඇතුළත් කරන්න.</p>
+              </div>
             </div>
 
             <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
               <div className="flex items-start gap-3 text-sm">
                 <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">!</div>
-                <p className="text-[11px]">Notification එක ලැබුණේ නැතිනම්, WhatsApp හි <b>Linked Devices &gt; Link with phone number instead</b> වෙත ගොස් මෙම කේතය ඇතුළත් කරන්න.</p>
-              </div>
-              <div className="flex items-start gap-3 text-sm">
-                <div className="mt-0.5 p-1 bg-accent/20 rounded text-accent font-bold text-[10px]">!</div>
-                <p className="text-[11px]">මෙම කේතය විනාඩියකින් අවසන් වන බැවින් වහාම ඇතුළත් කරන්න.</p>
+                <p className="text-[11px]">Notification එක ලැබුණේ නැතිනම්: WhatsApp &gt; Settings &gt; Linked Devices &gt; Link a Device &gt; <b>Link with phone number instead</b> වෙත ගොස් කේතය ලබා දෙන්න.</p>
               </div>
             </div>
 
@@ -165,7 +164,7 @@ export function PairingSection() {
             </Button>
             
             <p className="text-[9px] text-center text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-1">
-              <ShieldCheck className="w-3 h-3" /> macOS Safari Identity Active
+              <ShieldCheck className="w-3 h-3" /> macOS Chrome Identity Priority
             </p>
           </div>
         )}
