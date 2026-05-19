@@ -31,11 +31,11 @@ async function startBot() {
     auth: state,
     printQRInTerminal: false,
     logger: pino({ level: 'silent' }) as any,
-    // Critical: Desktop identity to avoid "Couldn't link device" errors
-    browser: ['Ubuntu', 'Chrome', '20.0.04'],
+    // macOS Safari identity for maximum stability and to avoid closure
+    browser: ['Mac OS', 'Safari', '10.15.7'],
     connectTimeoutMs: 60000,
     defaultQueryTimeoutMs: 0,
-    keepAliveIntervalMs: 10000,
+    keepAliveIntervalMs: 25000,
   });
 
   sock.ev.on('creds.update', saveCreds);
@@ -48,13 +48,15 @@ async function startBot() {
     if (connection === 'close') {
       const shouldReconnect = (lastDisconnect?.error as any)?.output?.statusCode !== DisconnectReason.loggedOut;
       console.log('[INFO] Connection closed. Reconnecting:', shouldReconnect);
-      if (shouldReconnect) startBot();
+      if (shouldReconnect) {
+        setTimeout(() => startBot(), 5000); // Wait 5s before reconnecting
+      }
     }
   });
 
   try {
-    // Wait for the socket to stabilize before requesting the code
-    await delay(5000); 
+    // Wait for the socket to stabilize fully
+    await delay(10000); 
     
     if (!sock.authState.creds.registered) {
       console.log('[INFO] Requesting 8-digit pairing code...');
@@ -69,6 +71,9 @@ async function startBot() {
       console.log("2. Go to Linked Devices > Link a Device.");
       console.log("3. Select 'Link with phone number instead'.");
       console.log("4. Enter the code shown above.");
+
+      // Keep it alive
+      await delay(5000);
     } else {
       console.log('[INFO] Bot is already registered/linked.');
     }
