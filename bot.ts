@@ -10,22 +10,22 @@ import path from 'path';
 
 /**
  * SITHU MD Bot Standalone Script
- * Optimized for stability with macOS Safari identity.
+ * Optimized for stability with macOS Safari identity and pairing code.
  */
 async function startBot() {
   const phoneNumber = "94781229710";
-  const sessionPath = path.join(process.cwd(), 'session_data');
+  const sessionPath = './session_data';
   
-  // Ensure session directory exists
+  // Ensure session directory exists to prevent ENOENT errors
   if (!fs.existsSync(sessionPath)) {
     fs.mkdirSync(sessionPath, { recursive: true });
   }
 
-  // 1. Use 'session_data' for auth state
+  // 1. Use relative path for auth state
   const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
   const { version } = await fetchLatestBaileysVersion();
 
-  // 2 & 3. Configure socket with hardcoded number and macOS Safari identity
+  // 2. Configure socket with macOS Safari identity to avoid disconnection
   const sock = makeWASocket({
     version,
     auth: state,
@@ -34,15 +34,15 @@ async function startBot() {
     browser: ['Mac OS', 'Safari', '10.15.7'],
   });
 
-  // 4. Save credentials properly
+  // 3. Save credentials properly
   sock.ev.on('creds.update', saveCreds);
 
-  // 5 & 6. Connection monitoring and auto-restart
+  // 4. Connection monitoring and auto-restart
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect } = update;
 
     if (connection === 'open') {
-      console.log('[INFO] Bot is fully connected!');
+      console.log('\n[INFO] Bot is fully connected!');
     }
 
     if (connection === 'close') {
@@ -52,18 +52,18 @@ async function startBot() {
       console.log(`[INFO] Connection closed. Status Code: ${statusCode}`);
       
       if (shouldReconnect) {
-        console.log('[INFO] Restarting bot automatically to avoid hanging...');
+        console.log('[INFO] Restarting bot automatically to maintain connection...');
         startBot();
       } else {
-        console.log('[ERROR] Logged out from WhatsApp. Please clear "session_data" folder and restart.');
+        console.log('[ERROR] Logged out from WhatsApp. Please delete "session_data" folder and restart.');
       }
     }
   });
 
-  // 7. Request pairing code right after initialization if not registered
+  // 5. Request pairing code right after initialization if not registered
   if (!sock.authState.creds.registered) {
     console.log("[INFO] Stabilizing connection. Please wait 3 seconds...");
-    await delay(3000); // Essential delay to ensure socket readiness
+    await delay(3000); // Essential delay for socket stability before requesting code
     
     try {
       const code = await sock.requestPairingCode(phoneNumber);
@@ -82,7 +82,7 @@ async function startBot() {
   }
 }
 
-// Global process error handling
+// Global process error handling to prevent script hanging
 process.on('uncaughtException', (err) => {
   console.error('[FATAL ERROR]', err);
 });
