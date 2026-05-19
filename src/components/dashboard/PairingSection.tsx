@@ -26,7 +26,7 @@ export function PairingSection() {
           <div className="text-xs text-muted-foreground leading-relaxed space-y-3">
             <p>1. Terminal එකේ <b>npm run bot</b> විධානය ක්‍රියාත්මක කරන්න.</p>
             <p>2. එහි ලැබෙන අංක 8 ක <b>Pairing Code</b> එක ලබා ගන්න.</p>
-            <p>3. ඔබගේ දුරකථනයේ <b>Linked Devices > Link with phone number</b> වෙත යන්න.</p>
+            <p>3. ඔබගේ දුරකථනයේ <b>Linked Devices &gt; Link with phone number</b> වෙත යන්න.</p>
             <p>4. ලැබුණු කේතය එහි ඇතුළත් කරන්න.</p>
           </div>
         </div>
