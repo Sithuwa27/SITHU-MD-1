@@ -9,10 +9,11 @@ import fs from 'fs';
 import qrcodeTerminal from 'qrcode-terminal';
 import ytSearch from 'yt-search';
 import path from 'path';
+import ytdl from '@distube/ytdl-core';
 
 /**
- * SITHU MD Bot - Stable API Based Downloader
- * Bypasses YouTube IP blocks by using an external stable download API.
+ * SITHU MD Bot - Local Stream Based Downloader
+ * Uses @distube/ytdl-core for stable audio streaming.
  */
 async function startBot() {
   const sessionPath = './session_data';
@@ -108,55 +109,53 @@ async function startBot() {
         const fileName = `${Date.now()}.mp3`;
         const filePath = path.join(tempDir, fileName);
 
-        // 2. Fetch Download Link from High-Stability API (Dark Yasiya)
-        const apiUrl = `https://api.dark-yasiya.xyz/download/ytmp3?url=${encodeURIComponent(videoUrl)}`;
-        const apiResponse = await fetch(apiUrl);
-        const apiData = await apiResponse.json();
-
-        // Extract download URL based on API response structure
-        const downloadUrl = apiData?.result?.dl_link || apiData?.result?.download_url;
-
-        if (!downloadUrl) {
-          throw new Error('API failed to provide download link');
-        }
-
-        // 3. Download the Audio Buffer
-        const audioRes = await fetch(downloadUrl);
-        if (!audioRes.ok) throw new Error('Failed to download audio from provider');
-        
-        const arrayBuffer = await audioRes.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        // 4. Save to Temp File
-        fs.writeFileSync(filePath, buffer);
-
-        // 5. Send Audio Message
-        if (fs.existsSync(filePath)) {
-          await sock.sendMessage(jid, { 
-            audio: { url: filePath }, 
-            mimetype: 'audio/mp4', 
-            ptt: false,
-            contextInfo: {
-              externalAdReply: {
-                title: video.title,
-                body: `Artist: ${video.author.name} | SITHU MD`,
-                thumbnailUrl: video.thumbnail,
-                sourceUrl: videoUrl,
-                mediaType: 1,
-                renderLargerThumbnail: true
-              }
+        // 2. Download using @distube/ytdl-core stream
+        const audioStream = ytdl(videoUrl, {
+          filter: 'audioonly',
+          quality: 'highestaudio',
+          requestOptions: {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             }
-          });
+          }
+        });
 
-          // Clean up temp file
-          fs.unlinkSync(filePath);
-        } else {
-          sock.sendMessage(jid, { text: '❌ ගොනුව නිර්මාණය කිරීමට නොහැකි විය.' });
-        }
+        const fileWriteStream = fs.createWriteStream(filePath);
+        audioStream.pipe(fileWriteStream);
+
+        fileWriteStream.on('finish', async () => {
+          // 3. Send Audio Message once download is finished
+          if (fs.existsSync(filePath)) {
+            await sock.sendMessage(jid, { 
+              audio: { url: filePath }, 
+              mimetype: 'audio/mp4', 
+              ptt: false,
+              contextInfo: {
+                externalAdReply: {
+                  title: video.title,
+                  body: `Artist: ${video.author.name} | SITHU MD`,
+                  thumbnailUrl: video.thumbnail,
+                  sourceUrl: videoUrl,
+                  mediaType: 1,
+                  renderLargerThumbnail: true
+                }
+              }
+            });
+
+            // Clean up temp file
+            fs.unlinkSync(filePath);
+          }
+        });
+
+        audioStream.on('error', (err) => {
+          console.error('YTDL Stream Error:', err);
+          sock.sendMessage(jid, { text: '❌ ගීතය බාගත කිරීමේදී දෝෂයක් සිදු විය.' });
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        });
 
       } catch (error) {
         console.error('Song command error:', error);
-        sock.sendMessage(jid, { text: '❌ පද්ධතියේ දෝෂයක් සිදු විය. බාහිර සේවාදායකය (API) ප්‍රතිචාර නොදක්වයි. පසුව නැවත උත්සාහ කරන්න.' });
+        sock.sendMessage(jid, { text: '❌ පද්ධතියේ දෝෂයක් සිදු විය. පසුව නැවත උත්සාහ කරන්න.' });
       }
     }
 
