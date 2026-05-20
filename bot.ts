@@ -109,13 +109,13 @@ async function startBot() {
         const filePath = path.join(tempDir, fileName);
 
         // 2. Fetch Download Link from External Stable API
-        // Using the requested sandipbaruwal.codes API for high reliability
-        const apiUrl = `https://api.sandipbaruwal.codes/download/yt?url=${encodeURIComponent(videoUrl)}`;
+        // Using GiftedTech API for high reliability
+        const apiUrl = `https://api.giftedtech.my.id/api/download/ytmp3?url=${encodeURIComponent(videoUrl)}`;
         const apiResponse = await fetch(apiUrl);
         const apiData = await apiResponse.json();
 
-        // The API might return link in apiData.data.link or apiData.link based on structure
-        const downloadUrl = apiData?.data?.link || apiData?.link;
+        // Extract download URL based on API response structure
+        const downloadUrl = apiData?.result?.download_url || apiData?.download_url;
 
         if (!downloadUrl) {
           throw new Error('API failed to provide download link');
