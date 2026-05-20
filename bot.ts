@@ -8,17 +8,16 @@ import pino from 'pino';
 import fs from 'fs';
 import qrcodeTerminal from 'qrcode-terminal';
 import ytSearch from 'yt-search';
-import yt from 'yt-stream';
 import path from 'path';
+import { exec } from 'child_process';
 
 /**
- * SITHU MD Bot Standalone Script
- * Features: QR Auth, Song Downloader (using yt-stream)
+ * SITHU MD Bot - Standalone Script
+ * Uses yt-dlp for robust downloads to bypass IP blocks.
  */
 async function startBot() {
   const sessionPath = './session_data';
   const tempDir = './temp';
-  const phoneNumber = "94781229710";
   
   // Ensure directories exist
   if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
@@ -115,42 +114,45 @@ async function startBot() {
         const fileName = `${Date.now()}.mp3`;
         const filePath = path.join(tempDir, fileName);
 
-        // Get Stream using yt-stream
-        const streamData = await yt.stream(videoUrl, {
-          quality: 'high',
-          type: 'audio',
-          highWaterMark: 1048576 * 32 // 32MB buffer
-        });
+        // Download using yt-dlp
+        // --cookies cookies.txt is included if the file exists locally
+        const cookiesPath = path.join(process.cwd(), 'cookies.txt');
+        const cookieFlag = fs.existsSync(cookiesPath) ? `--cookies "${cookiesPath}"` : '';
+        
+        // Command to download audio only as mp3
+        const command = `yt-dlp ${cookieFlag} -x --audio-format mp3 --audio-quality 0 -o "${filePath}" "${videoUrl}"`;
 
-        const fileStream = fs.createWriteStream(filePath);
-        streamData.stream.pipe(fileStream);
+        exec(command, async (error, stdout, stderr) => {
+          if (error) {
+            console.error('yt-dlp error:', error);
+            console.error('stderr:', stderr);
+            return sock.sendMessage(jid, { text: '❌ ගීතය බාගත කිරීමේදී දෝෂයක් සිදු විය. පද්ධතිය YouTube විසින් අවහිර කර තිබිය හැක.' });
+          }
 
-        fileStream.on('finish', async () => {
-          // Send Audio Message
-          await sock.sendMessage(jid, { 
-            audio: { url: filePath }, 
-            mimetype: 'audio/mp4', 
-            ptt: false,
-            contextInfo: {
-              externalAdReply: {
-                title: video.title,
-                body: `Artist: ${video.author.name}`,
-                thumbnailUrl: video.thumbnail,
-                sourceUrl: videoUrl,
-                mediaType: 1,
-                renderLargerThumbnail: true
+          // Check if file exists after download
+          if (fs.existsSync(filePath)) {
+            // Send Audio Message
+            await sock.sendMessage(jid, { 
+              audio: { url: filePath }, 
+              mimetype: 'audio/mp4', 
+              ptt: false,
+              contextInfo: {
+                externalAdReply: {
+                  title: video.title,
+                  body: `Artist: ${video.author.name}`,
+                  thumbnailUrl: video.thumbnail,
+                  sourceUrl: videoUrl,
+                  mediaType: 1,
+                  renderLargerThumbnail: true
+                }
               }
-            }
-          });
+            });
 
-          // Clean up temp file
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        });
-
-        fileStream.on('error', (err) => {
-          console.error('File Stream Error:', err);
-          sock.sendMessage(jid, { text: '❌ ගොනුව සුරැකීමේදී දෝෂයක් සිදු විය.' });
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+            // Clean up temp file
+            fs.unlinkSync(filePath);
+          } else {
+            sock.sendMessage(jid, { text: '❌ ගොනුව නිර්මාණය කිරීමට නොහැකි විය.' });
+          }
         });
 
       } catch (error) {
