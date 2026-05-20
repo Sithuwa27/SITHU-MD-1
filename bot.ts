@@ -8,16 +8,17 @@ import pino from 'pino';
 import fs from 'fs';
 import qrcodeTerminal from 'qrcode-terminal';
 import ytSearch from 'yt-search';
-import ytdl from '@distube/ytdl-core';
+import yt from 'yt-stream';
 import path from 'path';
 
 /**
  * SITHU MD Bot Standalone Script
- * Features: QR Auth, Song Downloader (Patched)
+ * Features: QR Auth, Song Downloader (using yt-stream)
  */
 async function startBot() {
   const sessionPath = './session_data';
   const tempDir = './temp';
+  const phoneNumber = "94781229710";
   
   // Ensure directories exist
   if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
@@ -51,7 +52,7 @@ async function startBot() {
     }
 
     if (connection === 'open') {
-      console.log('\n[INFO] SITHU MD Bot is fully connected and active!');
+      console.log('\n[INFO] Bot is fully connected!');
     }
 
     if (connection === 'close') {
@@ -114,19 +115,15 @@ async function startBot() {
         const fileName = `${Date.now()}.mp3`;
         const filePath = path.join(tempDir, fileName);
 
-        // Download Audio using patched @distube/ytdl-core
-        const stream = ytdl(videoUrl, { 
-          filter: 'audioonly', 
-          quality: 'highestaudio',
-          requestOptions: {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
-          }
+        // Get Stream using yt-stream
+        const streamData = await yt.stream(videoUrl, {
+          quality: 'high',
+          type: 'audio',
+          highWaterMark: 1048576 * 32 // 32MB buffer
         });
-        
+
         const fileStream = fs.createWriteStream(filePath);
-        stream.pipe(fileStream);
+        streamData.stream.pipe(fileStream);
 
         fileStream.on('finish', async () => {
           // Send Audio Message
@@ -150,9 +147,9 @@ async function startBot() {
           if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
         });
 
-        stream.on('error', (err) => {
-          console.error('YTDL Stream Error:', err);
-          sock.sendMessage(jid, { text: '❌ සින්දුව බාගත කිරීමේදී තාක්ෂණික දෝෂයක් සිදු විය. (YouTube restricts this video)' });
+        fileStream.on('error', (err) => {
+          console.error('File Stream Error:', err);
+          sock.sendMessage(jid, { text: '❌ ගොනුව සුරැකීමේදී දෝෂයක් සිදු විය.' });
           if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
         });
 
