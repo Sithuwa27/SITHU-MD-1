@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "bot": "tsx bot.ts"
+    "bot": "tsx bot.ts",
+    "update-yt-dlp": "curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o yt-dlp && chmod +x yt-dlp"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.28.0",

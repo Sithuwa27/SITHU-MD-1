@@ -114,19 +114,22 @@ async function startBot() {
         const fileName = `${Date.now()}.mp3`;
         const filePath = path.join(tempDir, fileName);
 
+        // Prioritize local yt-dlp binary if it exists
+        const localYtDlp = path.join(process.cwd(), 'yt-dlp');
+        const ytDlpPath = fs.existsSync(localYtDlp) ? `./yt-dlp` : 'yt-dlp';
+
         // Download using yt-dlp
-        // --cookies cookies.txt is included if the file exists locally
         const cookiesPath = path.join(process.cwd(), 'cookies.txt');
         const cookieFlag = fs.existsSync(cookiesPath) ? `--cookies "${cookiesPath}"` : '';
         
-        // Command to download audio only as mp3
-        const command = `yt-dlp ${cookieFlag} -x --audio-format mp3 --audio-quality 0 -o "${filePath}" "${videoUrl}"`;
+        // Command to download audio only as mp3 with additional flags for stability
+        const command = `${ytDlpPath} ${cookieFlag} --no-check-certificate --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" -x --audio-format mp3 --audio-quality 0 -o "${filePath}" "${videoUrl}"`;
 
         exec(command, async (error, stdout, stderr) => {
           if (error) {
             console.error('yt-dlp error:', error);
             console.error('stderr:', stderr);
-            return sock.sendMessage(jid, { text: '❌ ගීතය බාගත කිරීමේදී දෝෂයක් සිදු විය. පද්ධතිය YouTube විසින් අවහිර කර තිබිය හැක.' });
+            return sock.sendMessage(jid, { text: '❌ ගීතය බාගත කිරීමේදී දෝෂයක් සිදු විය. පද්ධතිය YouTube විසින් අවහිර කර තිබිය හැක. (Try running "npm run update-yt-dlp" in terminal)' });
           }
 
           // Check if file exists after download
