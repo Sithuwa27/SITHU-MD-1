@@ -8,12 +8,12 @@ import pino from 'pino';
 import fs from 'fs';
 import qrcodeTerminal from 'qrcode-terminal';
 import ytSearch from 'yt-search';
-import ytdl from 'ytdl-core-muxer';
+import ytdl from '@distube/ytdl-core';
 import path from 'path';
 
 /**
  * SITHU MD Bot Standalone Script
- * Features: QR Auth, Song Downloader
+ * Features: QR Auth, Song Downloader (Patched)
  */
 async function startBot() {
   const sessionPath = './session_data';
@@ -77,7 +77,7 @@ async function startBot() {
     const jid = m.key.remoteJid!;
     const messageType = Object.keys(m.message)[0];
     
-    // Extract text content from different message types
+    // Extract text content
     let text = '';
     if (messageType === 'conversation') {
       text = m.message.conversation || '';
@@ -111,13 +111,21 @@ async function startBot() {
         }
 
         const videoUrl = video.url;
-        const fileName = `${video.videoId}.mp3`;
+        const fileName = `${Date.now()}.mp3`;
         const filePath = path.join(tempDir, fileName);
 
-        // Download Audio using ytdl-core-muxer
-        const stream = ytdl(videoUrl, { filter: 'audioonly', quality: 'highestaudio' });
-        const fileStream = fs.createWriteStream(filePath);
+        // Download Audio using patched @distube/ytdl-core
+        const stream = ytdl(videoUrl, { 
+          filter: 'audioonly', 
+          quality: 'highestaudio',
+          requestOptions: {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            }
+          }
+        });
         
+        const fileStream = fs.createWriteStream(filePath);
         stream.pipe(fileStream);
 
         fileStream.on('finish', async () => {
@@ -138,15 +146,13 @@ async function startBot() {
             }
           });
 
-          // Clean up temp file safely
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-          }
+          // Clean up temp file
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
         });
 
-        fileStream.on('error', (err) => {
-          console.error('Download error:', err);
-          sock.sendMessage(jid, { text: '❌ ගීතය බාගත කිරීමේදී දෝෂයක් සිදු විය. කරුණාකර නැවත උත්සාහ කරන්න.' });
+        stream.on('error', (err) => {
+          console.error('YTDL Stream Error:', err);
+          sock.sendMessage(jid, { text: '❌ සින්දුව බාගත කිරීමේදී තාක්ෂණික දෝෂයක් සිදු විය. (YouTube restricts this video)' });
           if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
         });
 
