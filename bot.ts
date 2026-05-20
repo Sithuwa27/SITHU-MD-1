@@ -8,7 +8,7 @@ import pino from 'pino';
 import fs from 'fs';
 import qrcodeTerminal from 'qrcode-terminal';
 import ytSearch from 'yt-search';
-import ytdl from '@distube/ytdl-core';
+import ytdl from 'ytdl-core-muxer';
 import path from 'path';
 
 /**
@@ -114,7 +114,7 @@ async function startBot() {
         const fileName = `${video.videoId}.mp3`;
         const filePath = path.join(tempDir, fileName);
 
-        // Download Audio using @distube/ytdl-core
+        // Download Audio using ytdl-core-muxer
         const stream = ytdl(videoUrl, { filter: 'audioonly', quality: 'highestaudio' });
         const fileStream = fs.createWriteStream(filePath);
         
