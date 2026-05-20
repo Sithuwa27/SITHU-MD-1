@@ -9,11 +9,10 @@ import fs from 'fs';
 import qrcodeTerminal from 'qrcode-terminal';
 import ytSearch from 'yt-search';
 import path from 'path';
-import { exec } from 'child_process';
 
 /**
- * SITHU MD Bot - Standalone Script
- * Uses yt-dlp for robust downloads to bypass IP blocks.
+ * SITHU MD Bot - API Based Downloader
+ * Bypasses YouTube IP blocks by using an external download API.
  */
 async function startBot() {
   const sessionPath = './session_data';
@@ -77,16 +76,11 @@ async function startBot() {
     const jid = m.key.remoteJid!;
     const messageType = Object.keys(m.message)[0];
     
-    // Extract text content
     let text = '';
     if (messageType === 'conversation') {
       text = m.message.conversation || '';
     } else if (messageType === 'extendedTextMessage') {
       text = m.message.extendedTextMessage?.text || '';
-    } else if (messageType === 'imageMessage') {
-      text = m.message.imageMessage?.caption || '';
-    } else if (messageType === 'videoMessage') {
-      text = m.message.videoMessage?.caption || '';
     }
 
     const lowerText = text.toLowerCase();
@@ -102,7 +96,7 @@ async function startBot() {
       try {
         await sock.sendMessage(jid, { text: `🎧 *SITHU MD SEARCHING* 🎧\n\n🔎 සොයමින් පවතී: *${query}*\n\nකරුණාකර මොහොතක් රැඳී සිටින්න...` });
 
-        // Search YouTube
+        // 1. Search YouTube
         const searchResults = await ytSearch(query);
         const video = searchResults.videos[0];
 
@@ -114,53 +108,55 @@ async function startBot() {
         const fileName = `${Date.now()}.mp3`;
         const filePath = path.join(tempDir, fileName);
 
-        // Prioritize local yt-dlp binary if it exists
-        const localYtDlp = path.join(process.cwd(), 'yt-dlp');
-        const ytDlpPath = fs.existsSync(localYtDlp) ? `./yt-dlp` : 'yt-dlp';
+        // 2. Fetch Download Link from External API
+        // Using a public free API to bypass local IP blocks
+        const apiUrl = `https://api.vreden.my.id/api/ytmp3?url=${encodeURIComponent(videoUrl)}`;
+        const apiResponse = await fetch(apiUrl);
+        const apiData = await apiResponse.json();
 
-        // Download using yt-dlp
-        const cookiesPath = path.join(process.cwd(), 'cookies.txt');
-        const cookieFlag = fs.existsSync(cookiesPath) ? `--cookies "${cookiesPath}"` : '';
+        if (!apiData || !apiData.status || !apiData.result || !apiData.result.download) {
+          throw new Error('API failed to provide download link');
+        }
+
+        const downloadUrl = apiData.result.download.url;
+
+        // 3. Download the Audio Buffer
+        const audioRes = await fetch(downloadUrl);
+        if (!audioRes.ok) throw new Error('Failed to download audio from provider');
         
-        // Command to download audio only as mp3 with additional flags for stability
-        const command = `${ytDlpPath} ${cookieFlag} --no-check-certificate --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" -x --audio-format mp3 --audio-quality 0 -o "${filePath}" "${videoUrl}"`;
+        const arrayBuffer = await audioRes.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
 
-        exec(command, async (error, stdout, stderr) => {
-          if (error) {
-            console.error('yt-dlp error:', error);
-            console.error('stderr:', stderr);
-            return sock.sendMessage(jid, { text: '❌ ගීතය බාගත කිරීමේදී දෝෂයක් සිදු විය. පද්ධතිය YouTube විසින් අවහිර කර තිබිය හැක. (Try running "npm run update-yt-dlp" in terminal)' });
-          }
+        // 4. Save to Temp File
+        fs.writeFileSync(filePath, buffer);
 
-          // Check if file exists after download
-          if (fs.existsSync(filePath)) {
-            // Send Audio Message
-            await sock.sendMessage(jid, { 
-              audio: { url: filePath }, 
-              mimetype: 'audio/mp4', 
-              ptt: false,
-              contextInfo: {
-                externalAdReply: {
-                  title: video.title,
-                  body: `Artist: ${video.author.name}`,
-                  thumbnailUrl: video.thumbnail,
-                  sourceUrl: videoUrl,
-                  mediaType: 1,
-                  renderLargerThumbnail: true
-                }
+        // 5. Send Audio Message
+        if (fs.existsSync(filePath)) {
+          await sock.sendMessage(jid, { 
+            audio: { url: filePath }, 
+            mimetype: 'audio/mp4', 
+            ptt: false,
+            contextInfo: {
+              externalAdReply: {
+                title: video.title,
+                body: `Artist: ${video.author.name} | SITHU MD`,
+                thumbnailUrl: video.thumbnail,
+                sourceUrl: videoUrl,
+                mediaType: 1,
+                renderLargerThumbnail: true
               }
-            });
+            }
+          });
 
-            // Clean up temp file
-            fs.unlinkSync(filePath);
-          } else {
-            sock.sendMessage(jid, { text: '❌ ගොනුව නිර්මාණය කිරීමට නොහැකි විය.' });
-          }
-        });
+          // Clean up temp file
+          fs.unlinkSync(filePath);
+        } else {
+          sock.sendMessage(jid, { text: '❌ ගොනුව නිර්මාණය කිරීමට නොහැකි විය.' });
+        }
 
       } catch (error) {
         console.error('Song command error:', error);
-        sock.sendMessage(jid, { text: '❌ පද්ධතියේ දෝෂයක් සිදු විය. පසුව නැවත උත්සාහ කරන්න.' });
+        sock.sendMessage(jid, { text: '❌ පද්ධතියේ දෝෂයක් සිදු විය. YouTube සර්වර් එක අපගේ සේවාව අවහිර කර ඇත. පසුව නැවත උත්සාහ කරන්න.' });
       }
     }
 
