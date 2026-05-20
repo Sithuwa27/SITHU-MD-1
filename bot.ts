@@ -11,8 +11,8 @@ import ytSearch from 'yt-search';
 import path from 'path';
 
 /**
- * SITHU MD Bot - API Based Downloader
- * Bypasses YouTube IP blocks by using an external download API.
+ * SITHU MD Bot - Stable API Based Downloader
+ * Bypasses YouTube IP blocks by using an external stable download API.
  */
 async function startBot() {
   const sessionPath = './session_data';
@@ -108,17 +108,18 @@ async function startBot() {
         const fileName = `${Date.now()}.mp3`;
         const filePath = path.join(tempDir, fileName);
 
-        // 2. Fetch Download Link from External API
-        // Using a public free API to bypass local IP blocks
-        const apiUrl = `https://api.vreden.my.id/api/ytmp3?url=${encodeURIComponent(videoUrl)}`;
+        // 2. Fetch Download Link from External Stable API
+        // Using the requested sandipbaruwal.codes API for high reliability
+        const apiUrl = `https://api.sandipbaruwal.codes/download/yt?url=${encodeURIComponent(videoUrl)}`;
         const apiResponse = await fetch(apiUrl);
         const apiData = await apiResponse.json();
 
-        if (!apiData || !apiData.status || !apiData.result || !apiData.result.download) {
+        // The API might return link in apiData.data.link or apiData.link based on structure
+        const downloadUrl = apiData?.data?.link || apiData?.link;
+
+        if (!downloadUrl) {
           throw new Error('API failed to provide download link');
         }
-
-        const downloadUrl = apiData.result.download.url;
 
         // 3. Download the Audio Buffer
         const audioRes = await fetch(downloadUrl);
@@ -156,7 +157,7 @@ async function startBot() {
 
       } catch (error) {
         console.error('Song command error:', error);
-        sock.sendMessage(jid, { text: '❌ පද්ධතියේ දෝෂයක් සිදු විය. YouTube සර්වර් එක අපගේ සේවාව අවහිර කර ඇත. පසුව නැවත උත්සාහ කරන්න.' });
+        sock.sendMessage(jid, { text: '❌ පද්ධතියේ දෝෂයක් සිදු විය. බාහිර සේවාදායකය (API) ප්‍රතිචාර නොදක්වයි. පසුව නැවත උත්සාහ කරන්න.' });
       }
     }
 
