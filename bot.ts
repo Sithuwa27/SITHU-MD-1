@@ -108,14 +108,13 @@ async function startBot() {
         const fileName = `${Date.now()}.mp3`;
         const filePath = path.join(tempDir, fileName);
 
-        // 2. Fetch Download Link from External Stable API
-        // Using GiftedTech API for high reliability
-        const apiUrl = `https://api.giftedtech.my.id/api/download/ytmp3?url=${encodeURIComponent(videoUrl)}`;
+        // 2. Fetch Download Link from High-Stability API (Dark Yasiya)
+        const apiUrl = `https://api.dark-yasiya.xyz/download/ytmp3?url=${encodeURIComponent(videoUrl)}`;
         const apiResponse = await fetch(apiUrl);
         const apiData = await apiResponse.json();
 
         // Extract download URL based on API response structure
-        const downloadUrl = apiData?.result?.download_url || apiData?.download_url;
+        const downloadUrl = apiData?.result?.dl_link || apiData?.result?.download_url;
 
         if (!downloadUrl) {
           throw new Error('API failed to provide download link');
