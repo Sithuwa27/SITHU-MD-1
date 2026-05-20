@@ -114,7 +114,7 @@ async function startBot() {
         const fileName = `${video.videoId}.mp3`;
         const filePath = path.join(tempDir, fileName);
 
-        // Download Audio
+        // Download Audio using @distube/ytdl-core
         const stream = ytdl(videoUrl, { filter: 'audioonly', quality: 'highestaudio' });
         const fileStream = fs.createWriteStream(filePath);
         
@@ -138,13 +138,16 @@ async function startBot() {
             }
           });
 
-          // Clean up temp file
-          fs.unlinkSync(filePath);
+          // Clean up temp file safely
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
         });
 
         fileStream.on('error', (err) => {
           console.error('Download error:', err);
           sock.sendMessage(jid, { text: '❌ ගීතය බාගත කිරීමේදී දෝෂයක් සිදු විය. කරුණාකර නැවත උත්සාහ කරන්න.' });
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
         });
 
       } catch (error) {
@@ -160,7 +163,7 @@ async function startBot() {
   });
 }
 
-// Global error handling
+// Global error handling to prevent crash
 process.on('uncaughtException', (err) => {
   console.error('[FATAL ERROR]', err);
 });
