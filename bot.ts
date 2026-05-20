@@ -9,11 +9,11 @@ import fs from 'fs';
 import qrcodeTerminal from 'qrcode-terminal';
 import ytSearch from 'yt-search';
 import path from 'path';
-import ytdl from '@distube/ytdl-core';
+import axios from 'axios';
 
 /**
- * SITHU MD Bot - Local Stream Based Downloader
- * Uses @distube/ytdl-core for stable audio streaming.
+ * SITHU MD Bot - API Based Downloader
+ * Uses external Web API for reliable YouTube to MP3 conversion.
  */
 async function startBot() {
   const sessionPath = './session_data';
@@ -106,52 +106,54 @@ async function startBot() {
         }
 
         const videoUrl = video.url;
+        
+        // 2. Fetch Download Link from Web API
+        const apiUrl = `https://api.dark-yasiya.xyz/download/ytmp3?url=${encodeURIComponent(videoUrl)}`;
+        const apiResponse = await axios.get(apiUrl);
+        
+        if (!apiResponse.data || !apiResponse.data.status) {
+          return sock.sendMessage(jid, { text: '❌ ගීතය සොයා ගැනීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.' });
+        }
+
+        const downloadLink = apiResponse.data.result.dl_link || apiResponse.data.result.download_url;
+        
+        if (!downloadLink) {
+          return sock.sendMessage(jid, { text: '❌ බාගත කිරීමේ දත්ත ලබා ගැනීමට නොහැකි විය.' });
+        }
+
         const fileName = `${Date.now()}.mp3`;
         const filePath = path.join(tempDir, fileName);
 
-        // 2. Download using @distube/ytdl-core stream
-        const audioStream = ytdl(videoUrl, {
-          filter: 'audioonly',
-          quality: 'highestaudio',
-          requestOptions: {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
-          }
+        // 3. Download the file using axios as buffer
+        const response = await axios({
+          method: 'get',
+          url: downloadLink,
+          responseType: 'arraybuffer'
         });
 
-        const fileWriteStream = fs.createWriteStream(filePath);
-        audioStream.pipe(fileWriteStream);
+        fs.writeFileSync(filePath, response.data);
 
-        fileWriteStream.on('finish', async () => {
-          // 3. Send Audio Message once download is finished
-          if (fs.existsSync(filePath)) {
-            await sock.sendMessage(jid, { 
-              audio: { url: filePath }, 
-              mimetype: 'audio/mp4', 
-              ptt: false,
-              contextInfo: {
-                externalAdReply: {
-                  title: video.title,
-                  body: `Artist: ${video.author.name} | SITHU MD`,
-                  thumbnailUrl: video.thumbnail,
-                  sourceUrl: videoUrl,
-                  mediaType: 1,
-                  renderLargerThumbnail: true
-                }
+        // 4. Send Audio Message
+        if (fs.existsSync(filePath)) {
+          await sock.sendMessage(jid, { 
+            audio: { url: filePath }, 
+            mimetype: 'audio/mp4', 
+            ptt: false,
+            contextInfo: {
+              externalAdReply: {
+                title: video.title,
+                body: `Artist: ${video.author.name} | SITHU MD`,
+                thumbnailUrl: video.thumbnail,
+                sourceUrl: videoUrl,
+                mediaType: 1,
+                renderLargerThumbnail: true
               }
-            });
+            }
+          });
 
-            // Clean up temp file
-            fs.unlinkSync(filePath);
-          }
-        });
-
-        audioStream.on('error', (err) => {
-          console.error('YTDL Stream Error:', err);
-          sock.sendMessage(jid, { text: '❌ ගීතය බාගත කිරීමේදී දෝෂයක් සිදු විය.' });
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        });
+          // Clean up temp file
+          fs.unlinkSync(filePath);
+        }
 
       } catch (error) {
         console.error('Song command error:', error);
